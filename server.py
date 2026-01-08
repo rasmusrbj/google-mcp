@@ -2291,6 +2291,300 @@ def forms_add_multiple_choice(form_id: str, question_text: str, options: str, re
 
 
 @mcp.tool()
+def forms_add_paragraph_text(form_id: str, question_text: str, required: bool = False) -> str:
+    """Add a paragraph text question (long-form text) to a form."""
+    service = get_service('forms', 'v1')
+
+    request = {
+        'requests': [{
+            'createItem': {
+                'item': {
+                    'title': question_text,
+                    'questionItem': {
+                        'question': {
+                            'required': required,
+                            'textQuestion': {
+                                'paragraph': True
+                            }
+                        }
+                    }
+                },
+                'location': {'index': 0}
+            }
+        }]
+    }
+
+    service.forms().batchUpdate(formId=form_id, body=request).execute()
+    return f"✅ Added paragraph text question: {question_text}"
+
+
+@mcp.tool()
+def forms_add_checkbox(form_id: str, question_text: str, options: str, required: bool = False) -> str:
+    """Add a checkbox question (multiple selections allowed). options: comma-separated like 'Option 1,Option 2,Option 3'"""
+    service = get_service('forms', 'v1')
+
+    option_list = [opt.strip() for opt in options.split(',')]
+
+    request = {
+        'requests': [{
+            'createItem': {
+                'item': {
+                    'title': question_text,
+                    'questionItem': {
+                        'question': {
+                            'required': required,
+                            'choiceQuestion': {
+                                'type': 'CHECKBOX',
+                                'options': [{'value': opt} for opt in option_list]
+                            }
+                        }
+                    }
+                },
+                'location': {'index': 0}
+            }
+        }]
+    }
+
+    service.forms().batchUpdate(formId=form_id, body=request).execute()
+    return f"✅ Added checkbox question: {question_text}"
+
+
+@mcp.tool()
+def forms_add_dropdown(form_id: str, question_text: str, options: str, required: bool = False) -> str:
+    """Add a dropdown question. options: comma-separated like 'Option 1,Option 2,Option 3'"""
+    service = get_service('forms', 'v1')
+
+    option_list = [opt.strip() for opt in options.split(',')]
+
+    request = {
+        'requests': [{
+            'createItem': {
+                'item': {
+                    'title': question_text,
+                    'questionItem': {
+                        'question': {
+                            'required': required,
+                            'choiceQuestion': {
+                                'type': 'DROP_DOWN',
+                                'options': [{'value': opt} for opt in option_list]
+                            }
+                        }
+                    }
+                },
+                'location': {'index': 0}
+            }
+        }]
+    }
+
+    service.forms().batchUpdate(formId=form_id, body=request).execute()
+    return f"✅ Added dropdown question: {question_text}"
+
+
+@mcp.tool()
+def forms_add_scale(form_id: str, question_text: str, low: int = 1, high: int = 5,
+                    low_label: Optional[str] = None, high_label: Optional[str] = None, required: bool = False) -> str:
+    """Add a linear scale question (e.g., 1-5 rating). Optionally provide labels for low and high values."""
+    service = get_service('forms', 'v1')
+
+    scale_question = {
+        'low': low,
+        'high': high
+    }
+
+    if low_label:
+        scale_question['lowLabel'] = low_label
+    if high_label:
+        scale_question['highLabel'] = high_label
+
+    request = {
+        'requests': [{
+            'createItem': {
+                'item': {
+                    'title': question_text,
+                    'questionItem': {
+                        'question': {
+                            'required': required,
+                            'scaleQuestion': scale_question
+                        }
+                    }
+                },
+                'location': {'index': 0}
+            }
+        }]
+    }
+
+    service.forms().batchUpdate(formId=form_id, body=request).execute()
+    return f"✅ Added scale question: {question_text} ({low}-{high})"
+
+
+@mcp.tool()
+def forms_add_date(form_id: str, question_text: str, include_year: bool = True, required: bool = False) -> str:
+    """Add a date question to a form."""
+    service = get_service('forms', 'v1')
+
+    request = {
+        'requests': [{
+            'createItem': {
+                'item': {
+                    'title': question_text,
+                    'questionItem': {
+                        'question': {
+                            'required': required,
+                            'dateQuestion': {
+                                'includeYear': include_year
+                            }
+                        }
+                    }
+                },
+                'location': {'index': 0}
+            }
+        }]
+    }
+
+    service.forms().batchUpdate(formId=form_id, body=request).execute()
+    return f"✅ Added date question: {question_text}"
+
+
+@mcp.tool()
+def forms_add_time(form_id: str, question_text: str, duration: bool = False, required: bool = False) -> str:
+    """Add a time question. If duration=True, asks for duration instead of time of day."""
+    service = get_service('forms', 'v1')
+
+    request = {
+        'requests': [{
+            'createItem': {
+                'item': {
+                    'title': question_text,
+                    'questionItem': {
+                        'question': {
+                            'required': required,
+                            'timeQuestion': {
+                                'duration': duration
+                            }
+                        }
+                    }
+                },
+                'location': {'index': 0}
+            }
+        }]
+    }
+
+    service.forms().batchUpdate(formId=form_id, body=request).execute()
+    return f"✅ Added time question: {question_text}"
+
+
+@mcp.tool()
+def forms_update_settings(form_id: str, title: Optional[str] = None, description: Optional[str] = None,
+                          collect_email: Optional[bool] = None, allow_response_edits: Optional[bool] = None,
+                          quiz_mode: Optional[bool] = None) -> str:
+    """Update form settings like title, description, and response options."""
+    service = get_service('forms', 'v1')
+
+    requests = []
+
+    if title is not None:
+        requests.append({
+            'updateFormInfo': {
+                'info': {
+                    'title': title
+                },
+                'updateMask': 'title'
+            }
+        })
+
+    if description is not None:
+        requests.append({
+            'updateFormInfo': {
+                'info': {
+                    'description': description
+                },
+                'updateMask': 'description'
+            }
+        })
+
+    if collect_email is not None:
+        requests.append({
+            'updateSettings': {
+                'settings': {
+                    'quizSettings': {
+                        'isQuiz': quiz_mode if quiz_mode is not None else False
+                    }
+                },
+                'updateMask': 'quizSettings.isQuiz'
+            }
+        })
+
+    if not requests:
+        return "No settings to update."
+
+    request_body = {'requests': requests}
+    service.forms().batchUpdate(formId=form_id, body=request_body).execute()
+
+    return f"✅ Form settings updated!"
+
+
+@mcp.tool()
+def forms_delete_question(form_id: str, question_index: int) -> str:
+    """Delete a question from a form by its index (0-based)."""
+    service = get_service('forms', 'v1')
+
+    # Get form to find item at index
+    form = service.forms().get(formId=form_id).execute()
+
+    if 'items' not in form or question_index >= len(form['items']):
+        return f"❌ Question at index {question_index} not found."
+
+    item_id = form['items'][question_index].get('itemId')
+
+    if not item_id:
+        return f"❌ Could not get item ID for question at index {question_index}"
+
+    request = {
+        'requests': [{
+            'deleteItem': {
+                'location': {
+                    'index': question_index
+                }
+            }
+        }]
+    }
+
+    service.forms().batchUpdate(formId=form_id, body=request).execute()
+    return f"✅ Deleted question at index {question_index}"
+
+
+@mcp.tool()
+def forms_get_response(form_id: str, response_id: str) -> str:
+    """Get a specific form response with detailed answers."""
+    service = get_service('forms', 'v1')
+
+    try:
+        response = service.forms().responses().get(formId=form_id, responseId=response_id).execute()
+
+        output = f"Response ID: {response['responseId']}\n"
+        output += f"Timestamp: {response.get('lastSubmittedTime', 'N/A')}\n\n"
+
+        if 'answers' in response:
+            output += "Answers:\n\n"
+            for question_id, answer in response['answers'].items():
+                output += f"Question ID: {question_id}\n"
+
+                if 'textAnswers' in answer:
+                    for text_ans in answer['textAnswers'].get('answers', []):
+                        output += f"  Answer: {text_ans.get('value', 'N/A')}\n"
+
+                if 'fileUploadAnswers' in answer:
+                    output += f"  File upload response\n"
+
+                output += "\n"
+
+        return output
+
+    except Exception as e:
+        return f"❌ Error getting response: {str(e)}"
+
+
+@mcp.tool()
 def forms_list_responses(form_id: str) -> str:
     """List all responses to a form."""
     service = get_service('forms', 'v1')

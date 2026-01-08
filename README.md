@@ -117,12 +117,21 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Add speaker notes** to slides
 - Full shared drive support
 
-### 📋 Google Forms (5 tools)
+### 📋 Google Forms (13 tools)
 - **Create** new forms
 - **Get** form details and questions
-- **Add text questions** (short or paragraph)
+- **Add text questions** (short answer)
+- **Add paragraph text** questions (long-form)
 - **Add multiple choice** questions
-- **List responses** with full answer data
+- **Add checkbox** questions (multiple selections)
+- **Add dropdown** questions
+- **Add scale questions** (1-5 ratings, linear scale)
+- **Add date questions** with optional year
+- **Add time questions** (time of day or duration)
+- **Update form settings** (title, description, quiz mode)
+- **Delete questions** by index
+- **Get specific response** with detailed answers
+- **List all responses** with answer data
 
 ### 📅 Google Calendar (4 tools)
 - **List** upcoming events
@@ -272,7 +281,7 @@ Search my Gmail for emails from john@example.com sent this week
 Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz789
 ```
 
-## Available Tools (106 Tools Total)
+## Available Tools (114 Tools Total)
 
 ### Gmail Tools (33 tools)
 - `gmail_search(query, max_results)` - Search emails with Gmail query syntax
@@ -374,11 +383,20 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `slides_duplicate_slide(presentation_id, slide_id, index)` - Duplicate a slide
 - `slides_add_speaker_notes(presentation_id, slide_id, notes)` - Add/update speaker notes
 
-### Forms Tools (5 tools)
+### Forms Tools (13 tools)
 - `forms_create(title, description)` - Create new forms
 - `forms_get(form_id)` - Get form structure and questions
-- `forms_add_text_question(form_id, question_text, required)` - Add text questions
-- `forms_add_multiple_choice(form_id, question_text, options, required)` - Add choice questions
+- `forms_add_text_question(form_id, question_text, required)` - Add short text questions
+- `forms_add_paragraph_text(form_id, question_text, required)` - Add paragraph text questions
+- `forms_add_multiple_choice(form_id, question_text, options, required)` - Add multiple choice questions
+- `forms_add_checkbox(form_id, question_text, options, required)` - Add checkbox questions (multiple selections)
+- `forms_add_dropdown(form_id, question_text, options, required)` - Add dropdown questions
+- `forms_add_scale(form_id, question_text, low, high, low_label, high_label, required)` - Add linear scale questions (1-5, etc.)
+- `forms_add_date(form_id, question_text, include_year, required)` - Add date questions
+- `forms_add_time(form_id, question_text, duration, required)` - Add time questions (time of day or duration)
+- `forms_update_settings(form_id, title, description, collect_email, allow_response_edits, quiz_mode)` - Update form settings
+- `forms_delete_question(form_id, question_index)` - Delete question by index
+- `forms_get_response(form_id, response_id)` - Get specific response with detailed answers
 - `forms_list_responses(form_id)` - Get all form responses
 
 ### Calendar Tools (4 tools)
