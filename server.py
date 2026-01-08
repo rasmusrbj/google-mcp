@@ -4315,6 +4315,52 @@ def slides_get_details(presentation_id: str) -> str:
 
 
 @mcp.tool()
+def slides_list_layouts(presentation_id: str) -> str:
+    """List all available slide layouts in a presentation.
+
+    Layouts are predefined slide templates (title slide, bullet points, two columns, etc.)
+    that provide professional design and automatic element positioning.
+    Use the layout IDs when creating new slides for better-looking results.
+
+    Args:
+        presentation_id: The ID of the presentation
+    """
+    service = get_service('slides', 'v1')
+    presentation = service.presentations().get(presentationId=presentation_id).execute()
+
+    layouts = presentation.get('layouts', [])
+    masters = presentation.get('masters', [])
+
+    if not layouts:
+        return "No layouts found in this presentation."
+
+    output = f"Found {len(layouts)} layout(s):\n\n"
+
+    for layout in layouts:
+        layout_name = layout.get('layoutProperties', {}).get('displayName', 'Unnamed')
+        layout_id = layout.get('objectId', 'N/A')
+        master_id = layout.get('layoutProperties', {}).get('masterObjectId', 'N/A')
+
+        output += f"📐 {layout_name}\n"
+        output += f"   Layout ID: {layout_id}\n"
+
+        # List placeholders in this layout
+        elements = layout.get('pageElements', [])
+        placeholders = [e for e in elements if 'placeholder' in e.get('shape', {})]
+
+        if placeholders:
+            output += f"   Placeholders: "
+            placeholder_types = [p['shape']['placeholder']['type'] for p in placeholders]
+            output += ', '.join(placeholder_types)
+            output += "\n"
+
+        output += "\n"
+
+    output += "💡 Tip: Use layout IDs with slides_add_slide(layout_id=...) for professional-looking slides!\n"
+    return output
+
+
+@mcp.tool()
 def slides_read(presentation_id: str) -> str:
     """Read all text content from a presentation."""
     service = get_service('slides', 'v1')
@@ -4339,19 +4385,50 @@ def slides_read(presentation_id: str) -> str:
 
 
 @mcp.tool()
-def slides_add_slide(presentation_id: str, index: Optional[int] = None) -> str:
-    """Add a new blank slide to presentation. Index starts at 0 (default: append to end)."""
+def slides_add_slide(presentation_id: str, index: Optional[int] = None,
+                    layout_id: Optional[str] = None, layout_name: Optional[str] = None) -> str:
+    """Add a new slide to presentation using a predefined layout or blank.
+
+    Args:
+        presentation_id: The ID of the presentation
+        index: Position to insert (0-based, default: append to end)
+        layout_id: Layout ID to use (get from slides_list_layouts)
+        layout_name: Layout name to search for (e.g., "Title Slide", "Title and Body")
+                    If both layout_id and layout_name are provided, layout_id takes precedence.
+
+    💡 Tip: Use slides_list_layouts() first to see available layouts for better-looking slides!
+    """
     service = get_service('slides', 'v1')
+
+    # If layout_name is provided but not layout_id, search for it
+    if layout_name and not layout_id:
+        presentation = service.presentations().get(presentationId=presentation_id).execute()
+        layouts = presentation.get('layouts', [])
+
+        for layout in layouts:
+            display_name = layout.get('layoutProperties', {}).get('displayName', '')
+            if display_name.lower() == layout_name.lower():
+                layout_id = layout.get('objectId')
+                break
+
+        if not layout_id:
+            return f"❌ Layout '{layout_name}' not found. Use slides_list_layouts() to see available layouts."
 
     # Generate a unique ID for the new slide
     slide_id = f'slide_{int(datetime.now().timestamp())}'
 
-    requests = [{
-        'createSlide': {
-            'objectId': slide_id,
-            'insertionIndex': index if index is not None else None
+    create_slide_request = {
+        'objectId': slide_id,
+        'insertionIndex': index if index is not None else None
+    }
+
+    # Add layout reference if provided
+    if layout_id:
+        create_slide_request['slideLayoutReference'] = {
+            'layoutId': layout_id
         }
-    }]
+
+    requests = [{'createSlide': create_slide_request}]
 
     response = service.presentations().batchUpdate(
         presentationId=presentation_id,
@@ -4359,7 +4436,96 @@ def slides_add_slide(presentation_id: str, index: Optional[int] = None) -> str:
     ).execute()
 
     created_slide_id = response['replies'][0]['createSlide']['objectId']
-    return f"✅ New slide added!\nSlide ID: {created_slide_id}\nPresentation: {presentation_id}"
+
+    output = f"✅ New slide added!\nSlide ID: {created_slide_id}\nPresentation: {presentation_id}"
+    if layout_id:
+        output += f"\n🎨 Using layout: {layout_name if layout_name else layout_id}"
+
+    return output
+
+
+@mcp.tool()
+def slides_insert_text_in_placeholder(presentation_id: str, slide_id: str, text: str,
+                                      placeholder_type: Optional[str] = None,
+                                      placeholder_index: int = 0) -> str:
+    """Insert text into a layout placeholder (much better than manual positioning!).
+
+    When you use a layout (title slide, bullet points, etc.), the slide has predefined
+    placeholders like TITLE, BODY, SUBTITLE, etc. This function fills those placeholders
+    with text, giving you professional-looking slides automatically.
+
+    Args:
+        presentation_id: The ID of the presentation
+        slide_id: The ID of the slide
+        text: The text to insert
+        placeholder_type: Type of placeholder (TITLE, SUBTITLE, BODY, etc.)
+                         If not provided, uses the first available placeholder
+        placeholder_index: Index if multiple placeholders of same type (default: 0)
+
+    💡 Tip: Use this instead of slides_add_text() when working with layouts!
+    """
+    service = get_service('slides', 'v1')
+
+    # Get the slide to find placeholders
+    presentation = service.presentations().get(presentationId=presentation_id).execute()
+    slides = presentation.get('slides', [])
+
+    target_slide = None
+    for slide in slides:
+        if slide.get('objectId') == slide_id:
+            target_slide = slide
+            break
+
+    if not target_slide:
+        return f"❌ Slide {slide_id} not found"
+
+    # Find placeholder shapes
+    page_elements = target_slide.get('pageElements', [])
+    placeholders = []
+
+    for element in page_elements:
+        if 'shape' in element and 'placeholder' in element['shape']:
+            placeholders.append(element)
+
+    if not placeholders:
+        return f"❌ No placeholders found on this slide. Use slides_add_text() for manual positioning or create slide with a layout."
+
+    # Find the target placeholder
+    target_placeholder = None
+
+    if placeholder_type:
+        # Filter by type
+        typed_placeholders = [
+            p for p in placeholders
+            if p['shape']['placeholder']['type'] == placeholder_type
+        ]
+        if typed_placeholders and placeholder_index < len(typed_placeholders):
+            target_placeholder = typed_placeholders[placeholder_index]
+    else:
+        # Use first placeholder
+        target_placeholder = placeholders[0]
+
+    if not target_placeholder:
+        available_types = [p['shape']['placeholder']['type'] for p in placeholders]
+        return f"❌ Placeholder not found. Available types: {', '.join(available_types)}"
+
+    placeholder_id = target_placeholder['objectId']
+
+    # Insert text into the placeholder
+    requests = [{
+        'insertText': {
+            'objectId': placeholder_id,
+            'text': text
+        }
+    }]
+
+    service.presentations().batchUpdate(
+        presentationId=presentation_id,
+        body={'requests': requests}
+    ).execute()
+
+    placeholder_type_used = target_placeholder['shape']['placeholder']['type']
+    return f"✅ Text inserted into {placeholder_type_used} placeholder!\nSlide: {slide_id}"
 
 
 @mcp.tool()

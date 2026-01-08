@@ -11,7 +11,7 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 
 ✅ **Full Shared Drive Support** - Create, read, and manage files in shared drives
 ✅ **Complete Google Workspace** - Gmail, Drive, Docs, Sheets, Slides, Forms, Chat, Calendar, Tasks
-✅ **213 Production-Ready Tools** - Comprehensive coverage of all services
+✅ **215 Production-Ready Tools** - Comprehensive coverage of all services
 ✅ **Simple Setup** - Automated installation and authentication
 ✅ **Production Ready** - Proper error handling and token refresh
 
@@ -175,12 +175,14 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Create filters** - Add filter views
 - Formula support via USER_ENTERED mode
 
-### 🎨 Google Slides (12 tools)
+### 🎨 Google Slides (14 tools) - NOW WITH PROFESSIONAL LAYOUTS!
+- **List layouts** - View all available slide templates (title slide, bullet points, two columns, etc.)
+- **Add slides with layouts** - Use predefined layouts instead of blank slides for professional design
+- **Insert text in placeholders** - Fill layout placeholders automatically (no manual positioning!)
 - **Create** presentations in My Drive or Shared Drives
 - **Get details** about presentations (slide count, structure)
 - **Read** all text content from presentations
-- **Add slides** to presentations
-- **Add text** boxes to slides
+- **Add text** boxes with manual positioning
 - **Delete** slides from presentations
 - **Insert images** from URLs
 - **Replace text** across all slides (template automation!)
@@ -189,6 +191,8 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Duplicate slides**
 - **Add speaker notes** to slides
 - Full shared drive support
+
+💡 **For beautiful slides**: Use `slides_list_layouts()` to see available layouts, then create slides with `slides_add_slide(layout_name="Title Slide")` and fill them using `slides_insert_text_in_placeholder()`. This gives you professional design automatically!
 
 ### 📋 Google Forms (13 tools)
 - **Create** new forms
@@ -544,12 +548,14 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `sheets_create_chart(spreadsheet_id, sheet_id, chart_type, data_start_row, data_end_row, data_start_col, data_end_col, position_row, position_col)` - Create chart
 - `sheets_create_filter(spreadsheet_id, sheet_id, start_row, end_row, start_col, end_col)` - Create filter view
 
-### Slides Tools (12 tools)
+### Slides Tools (14 tools)
 - `slides_create(title, parent_id, drive_id)` - Create presentations
 - `slides_get_details(presentation_id)` - Get presentation details
+- `slides_list_layouts(presentation_id)` - **NEW!** List available slide layouts for professional design
 - `slides_read(presentation_id)` - Read all text content
-- `slides_add_slide(presentation_id, index)` - Add new slide
-- `slides_add_text(presentation_id, slide_id, text, x, y, width, height)` - Add text box to slide
+- `slides_add_slide(presentation_id, index, layout_id, layout_name)` - **ENHANCED!** Add slide with optional layout
+- `slides_insert_text_in_placeholder(presentation_id, slide_id, text, placeholder_type, placeholder_index)` - **NEW!** Insert text in layout placeholders (recommended!)
+- `slides_add_text(presentation_id, slide_id, text, x, y, width, height)` - Add text box with manual positioning
 - `slides_delete_slide(presentation_id, slide_id)` - Delete slide
 - `slides_insert_image(presentation_id, slide_id, image_url, x, y, width, height)` - Insert image from URL
 - `slides_replace_text(presentation_id, find_text, replace_text, match_case)` - Find and replace text across all slides
