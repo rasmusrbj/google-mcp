@@ -428,25 +428,54 @@ Railway is the easiest way to deploy. It's **free to start** and takes about 5 m
    https://your-app-name.railway.app
    ```
 
-   Copy this URL - you'll need it for Claude iOS configuration.
+   Copy this URL - you'll need it for authentication.
 
-#### 3. Configure Claude iOS App
+#### 3. Authenticate with Google
 
-1. Open **Claude iOS app**
-2. Go to **Settings** > **MCP Servers**
-3. Add new server:
-   - **Name**: Google Workspace
-   - **URL**: `https://your-app-name.railway.app`
-   - **Transport**: SSE
+**New!** You can now login directly via your browser - no need to manually set credentials!
 
-4. **Authenticate**:
-   - The app will prompt you to authenticate
-   - Follow the OAuth flow in the browser
-   - Grant permissions to your Google Workspace
+1. **Visit your Railway URL** in a browser:
+   ```
+   https://your-app-name.railway.app
+   ```
 
-5. **Start Using**:
-   - All 229 tools are now available on your iPhone/iPad!
-   - Ask: "List my shared drives", "Search my Gmail", etc.
+2. **Click "Login with Google"** on the status page
+
+3. **Authorize** the application:
+   - Sign in with your Google account
+   - Grant permissions to Google Workspace APIs
+   - You'll be redirected back with a success message
+
+4. **Done!** Your Railway server is now authenticated and ready to use
+
+**Note**: Railway has ephemeral storage, so if the server restarts, you'll need to login again. This is normal and takes just a few seconds.
+
+#### 4. Use from Claude Desktop
+
+To use the cloud version from Claude Desktop, add this to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "google-workspace-cloud": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://your-app-name.railway.app/sse"
+      ]
+    }
+  }
+}
+```
+
+Replace `your-app-name` with your actual Railway domain.
+
+Then:
+1. **Restart Claude Desktop** (Cmd+Q and reopen)
+2. The cloud server will be available alongside your local one
+3. All 229 tools work the same way!
+
+**Note**: Claude iOS doesn't currently support custom MCP servers. The cloud deployment is ready for when mobile support arrives.
 
 ### Alternative: Deploy to Google Cloud Run
 
