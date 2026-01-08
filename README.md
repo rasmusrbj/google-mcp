@@ -11,7 +11,7 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 
 ✅ **Full Shared Drive Support** - Create, read, and manage files in shared drives
 ✅ **Complete Google Workspace** - Gmail, Drive, Docs, Sheets, Slides, Forms, Chat, Calendar, Tasks
-✅ **208 Production-Ready Tools** - Comprehensive coverage of all services
+✅ **211 Production-Ready Tools** - Comprehensive coverage of all services
 ✅ **Simple Setup** - Automated installation and authentication
 ✅ **Production Ready** - Proper error handling and token refresh
 
@@ -231,9 +231,12 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Delete** events
 - Full timezone support
 
-### ✅ Google Tasks (4 tools)
-- **List** tasks from any task list
-- **Create** new tasks with notes
+### ✅ Google Tasks (7 tools)
+- **List task lists** - View all your to-do lists
+- **List tasks** - Advanced filtering (completed, deleted, hidden, date ranges)
+- **Get task** - View details of a specific task
+- **Create** tasks with due dates, notes, subtasks, and positioning
+- **Update** tasks - Modify title, notes, status, due date
 - **Complete** tasks (mark as done)
 - **Delete** tasks
 
@@ -594,9 +597,12 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `calendar_update_event(event_id, summary, start_time, end_time, description, location, attendees)` - Update events
 - `calendar_delete_event(event_id)` - Delete events
 
-### Tasks Tools (4 tools)
-- `tasks_list(task_list_id, max_results)` - List tasks
-- `tasks_create(title, notes, task_list_id)` - Create new tasks
+### Tasks Tools (7 tools)
+- `tasks_list_task_lists(max_results)` - List all task lists
+- `tasks_list(task_list_id, max_results, show_completed, show_deleted, show_hidden, completed_min, completed_max, due_min, due_max, updated_min)` - List tasks with advanced filtering
+- `tasks_get(task_id, task_list_id)` - Get details of a specific task
+- `tasks_create(title, notes, due, parent, previous, task_list_id)` - Create tasks with due dates, subtasks, and positioning
+- `tasks_update(task_id, task_list_id, title, notes, status, due)` - Update existing tasks
 - `tasks_complete(task_id, task_list_id)` - Mark tasks as done
 - `tasks_delete(task_id, task_list_id)` - Delete tasks
 

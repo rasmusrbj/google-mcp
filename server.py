@@ -4131,7 +4131,7 @@ def slides_add_slide(presentation_id: str, index: Optional[int] = None) -> str:
     service = get_service('slides', 'v1')
 
     # Generate a unique ID for the new slide
-    slide_id = f'slide_{datetime.now().timestamp()}'
+    slide_id = f'slide_{int(datetime.now().timestamp())}'
 
     requests = [{
         'createSlide': {
@@ -4156,7 +4156,7 @@ def slides_add_text(presentation_id: str, slide_id: str, text: str,
     service = get_service('slides', 'v1')
 
     # Generate unique ID for text box
-    text_box_id = f'textbox_{datetime.now().timestamp()}'
+    text_box_id = f'textbox_{int(datetime.now().timestamp())}'
 
     requests = [
         {
@@ -4220,7 +4220,7 @@ def slides_insert_image(presentation_id: str, slide_id: str, image_url: str,
     """Insert an image into a slide from a URL. Coordinates in points (1 inch = 72 points)."""
     service = get_service('slides', 'v1')
 
-    image_id = f'image_{datetime.now().timestamp()}'
+    image_id = f'image_{int(datetime.now().timestamp())}'
 
     requests = [{
         'createImage': {
@@ -4340,7 +4340,7 @@ def slides_add_shape(presentation_id: str, slide_id: str, shape_type: str,
     """Add a shape to a slide. Types: RECTANGLE, ELLIPSE, TRIANGLE, ARROW, etc."""
     service = get_service('slides', 'v1')
 
-    shape_id = f'shape_{datetime.now().timestamp()}'
+    shape_id = f'shape_{int(datetime.now().timestamp())}'
 
     requests = [{
         'createShape': {
@@ -5200,34 +5200,211 @@ def chat_delete_reaction(reaction_id: str) -> str:
 # ============================================================================
 
 @mcp.tool()
-def tasks_list(task_list_id: str = "@default", max_results: int = 20) -> str:
-    """List tasks from a task list."""
+def tasks_list_task_lists(max_results: int = 10) -> str:
+    """List all task lists (to-do lists) available to the user.
+
+    Args:
+        max_results: Maximum number of task lists to return (default: 10)
+    """
     service = get_service('tasks', 'v1')
-    results = service.tasks().list(tasklist=task_list_id, maxResults=max_results).execute()
-    tasks = results.get('items', [])
-    if not tasks:
-        return "No tasks found."
-    output = f"Found {len(tasks)} task(s):\n\n"
-    for task in tasks:
-        status = "✅" if task.get('status') == 'completed' else "⬜"
-        output += f"{status} {task['title']}\n"
-        if task.get('notes'):
-            output += f"   Notes: {task['notes']}\n"
-        if task.get('due'):
-            output += f"   Due: {task['due']}\n"
-        output += f"   ID: {task['id']}\n\n"
+    results = service.tasklists().list(maxResults=max_results).execute()
+    task_lists = results.get('items', [])
+
+    if not task_lists:
+        return "No task lists found."
+
+    output = f"Found {len(task_lists)} task list(s):\n\n"
+    for task_list in task_lists:
+        output += f"📋 {task_list['title']}\n"
+        output += f"   ID: {task_list['id']}\n"
+        if task_list.get('updated'):
+            output += f"   Updated: {task_list['updated']}\n"
+        output += "\n"
+
     return output
 
 
 @mcp.tool()
-def tasks_create(title: str, notes: Optional[str] = None, task_list_id: str = "@default") -> str:
-    """Create a new task."""
+def tasks_list(task_list_id: str = "@default", max_results: int = 20,
+               show_completed: bool = True, show_deleted: bool = False,
+               show_hidden: bool = False, completed_min: Optional[str] = None,
+               completed_max: Optional[str] = None, due_min: Optional[str] = None,
+               due_max: Optional[str] = None, updated_min: Optional[str] = None) -> str:
+    """List tasks from a task list with advanced filtering.
+
+    Args:
+        task_list_id: Task list ID (default: "@default")
+        max_results: Maximum number of tasks to return (default: 20, max: 10000)
+        show_completed: Include completed tasks (default: True)
+        show_deleted: Include deleted tasks (default: False)
+        show_hidden: Include hidden tasks (default: False)
+        completed_min: Lower bound for completion date (RFC 3339 timestamp)
+        completed_max: Upper bound for completion date (RFC 3339 timestamp)
+        due_min: Lower bound for due date (RFC 3339 timestamp)
+        due_max: Upper bound for due date (RFC 3339 timestamp)
+        updated_min: Lower bound for last modification time (RFC 3339 timestamp)
+    """
+    service = get_service('tasks', 'v1')
+
+    # Build query parameters
+    params = {
+        'tasklist': task_list_id,
+        'maxResults': max_results,
+        'showCompleted': show_completed,
+        'showDeleted': show_deleted,
+        'showHidden': show_hidden
+    }
+
+    # Add optional date filters
+    if completed_min:
+        params['completedMin'] = completed_min
+    if completed_max:
+        params['completedMax'] = completed_max
+    if due_min:
+        params['dueMin'] = due_min
+    if due_max:
+        params['dueMax'] = due_max
+    if updated_min:
+        params['updatedMin'] = updated_min
+
+    results = service.tasks().list(**params).execute()
+    tasks = results.get('items', [])
+
+    if not tasks:
+        return "No tasks found matching the criteria."
+
+    output = f"Found {len(tasks)} task(s):\n\n"
+    for task in tasks:
+        status = "✅" if task.get('status') == 'completed' else "⬜"
+        deleted = " [DELETED]" if task.get('deleted') else ""
+        hidden = " [HIDDEN]" if task.get('hidden') else ""
+
+        output += f"{status} {task['title']}{deleted}{hidden}\n"
+        if task.get('notes'):
+            output += f"   Notes: {task['notes']}\n"
+        if task.get('due'):
+            output += f"   Due: {task['due']}\n"
+        if task.get('completed'):
+            output += f"   Completed: {task['completed']}\n"
+        output += f"   ID: {task['id']}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def tasks_create(title: str, notes: Optional[str] = None, due: Optional[str] = None,
+                 parent: Optional[str] = None, previous: Optional[str] = None,
+                 task_list_id: str = "@default") -> str:
+    """Create a new task.
+
+    Args:
+        title: Task title
+        notes: Task notes/description
+        due: Due date in RFC 3339 format (e.g., "2024-12-31T23:59:59Z")
+        parent: Parent task ID (for creating subtasks)
+        previous: Previous sibling task ID (for positioning)
+        task_list_id: Task list ID (default: "@default")
+    """
     service = get_service('tasks', 'v1')
     task = {'title': title}
     if notes:
         task['notes'] = notes
-    result = service.tasks().insert(tasklist=task_list_id, body=task).execute()
-    return f"✅ Task created!\nTitle: {result['title']}\nID: {result['id']}"
+    if due:
+        task['due'] = due
+
+    # Build the insert request with optional parent and previous parameters
+    insert_params = {'tasklist': task_list_id, 'body': task}
+    if parent:
+        insert_params['parent'] = parent
+    if previous:
+        insert_params['previous'] = previous
+
+    result = service.tasks().insert(**insert_params).execute()
+
+    output = f"✅ Task created!\nTitle: {result['title']}\nID: {result['id']}"
+    if result.get('due'):
+        output += f"\nDue: {result['due']}"
+    if parent:
+        output += f"\n(Subtask of: {parent})"
+    return output
+
+
+@mcp.tool()
+def tasks_get(task_id: str, task_list_id: str = "@default") -> str:
+    """Get details of a specific task.
+
+    Args:
+        task_id: The ID of the task to retrieve
+        task_list_id: Task list ID (default: "@default")
+    """
+    service = get_service('tasks', 'v1')
+    task = service.tasks().get(tasklist=task_list_id, task=task_id).execute()
+
+    status = "✅ Completed" if task.get('status') == 'completed' else "⬜ Not completed"
+    output = f"Task Details:\n\n"
+    output += f"Title: {task['title']}\n"
+    output += f"Status: {status}\n"
+    output += f"ID: {task['id']}\n"
+
+    if task.get('notes'):
+        output += f"Notes: {task['notes']}\n"
+    if task.get('due'):
+        output += f"Due: {task['due']}\n"
+    if task.get('completed'):
+        output += f"Completed: {task['completed']}\n"
+    if task.get('updated'):
+        output += f"Updated: {task['updated']}\n"
+    if task.get('parent'):
+        output += f"Parent Task ID: {task['parent']}\n"
+    if task.get('position'):
+        output += f"Position: {task['position']}\n"
+
+    return output
+
+
+@mcp.tool()
+def tasks_update(task_id: str, task_list_id: str = "@default",
+                 title: Optional[str] = None, notes: Optional[str] = None,
+                 status: Optional[str] = None, due: Optional[str] = None) -> str:
+    """Update an existing task.
+
+    Args:
+        task_id: The ID of the task to update
+        task_list_id: Task list ID (default: "@default")
+        title: New title for the task
+        notes: New notes/description for the task
+        status: New status ("needsAction" or "completed")
+        due: New due date in RFC 3339 format (e.g., "2024-12-31T23:59:59Z")
+    """
+    service = get_service('tasks', 'v1')
+
+    # Get current task
+    task = service.tasks().get(tasklist=task_list_id, task=task_id).execute()
+
+    # Update fields if provided
+    if title is not None:
+        task['title'] = title
+    if notes is not None:
+        task['notes'] = notes
+    if status is not None:
+        task['status'] = status
+    if due is not None:
+        task['due'] = due
+
+    # Update the task
+    result = service.tasks().update(tasklist=task_list_id, task=task_id, body=task).execute()
+
+    status_emoji = "✅" if result.get('status') == 'completed' else "⬜"
+    output = f"{status_emoji} Task updated!\n\n"
+    output += f"Title: {result['title']}\n"
+    output += f"ID: {result['id']}\n"
+    if result.get('notes'):
+        output += f"Notes: {result['notes']}\n"
+    if result.get('due'):
+        output += f"Due: {result['due']}\n"
+    output += f"Status: {result['status']}\n"
+
+    return output
 
 
 @mcp.tool()
