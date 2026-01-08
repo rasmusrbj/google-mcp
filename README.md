@@ -11,7 +11,7 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 
 ✅ **Full Shared Drive Support** - Create, read, and manage files in shared drives
 ✅ **Complete Google Workspace** - Gmail, Drive, Docs, Sheets, Slides, Forms, Chat, Calendar, Tasks
-✅ **223 Production-Ready Tools** - Comprehensive coverage of all services
+✅ **229 Production-Ready Tools** - Comprehensive coverage of all services
 ✅ **Simple Setup** - Automated installation and authentication
 ✅ **Production Ready** - Proper error handling and token refresh
 
@@ -110,9 +110,15 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Batch delete** - Delete multiple files at once
 - Works seamlessly with both My Drive and Team Drives
 
-### 📝 Google Docs (38 tools)
+### 📝 Google Docs (44 tools) - ENHANCED NAVIGATION & CONTENT MANAGEMENT!
 - **Create** documents in My Drive or Shared Drives
 - **Read** full document content
+- **Get metadata** - **NEW!** Document stats (word count, paragraphs, tables, revision info, suggestions)
+- **Find text** - **NEW!** Search and get exact positions for navigation and editing
+- **Get text at range** - **NEW!** Extract specific sections by index
+- **List inline objects** - **NEW!** Find all images, tables, drawings with positions
+- **Get links** - **NEW!** List all hyperlinks with URLs and positions
+- **Copy content between docs** - **NEW!** Transfer sections between documents
 - **Append** text to existing documents
 - **Insert** text at specific positions
 - **Replace** text (find and replace)
@@ -146,6 +152,8 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Add bookmarks** for internal linking
 - **Create named ranges** - Reference text selections
 - **Delete named ranges**
+
+💡 **New navigation features**: Use `docs_find_text()` to locate content, `docs_get_metadata()` for statistics, and `docs_copy_content_between_docs()` to combine documents!
 - Full shared drive support
 
 ### 📊 Google Sheets (38 tools)
@@ -391,7 +399,7 @@ Search my Gmail for emails from john@example.com sent this week
 Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz789
 ```
 
-## Available Tools (223 Tools Total)
+## Available Tools (229 Tools Total)
 
 ### Gmail Tools (41 tools)
 - `gmail_search(query, max_results)` - Search emails with Gmail query syntax
@@ -486,9 +494,15 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `drive_batch_get_metadata(file_ids, drive_id)` - Get metadata for multiple files
 - `drive_batch_delete(file_ids, drive_id)` - Delete multiple files at once
 
-### Docs Tools (38 tools)
+### Docs Tools (44 tools)
 - `docs_create(title, parent_id, drive_id)` - Create documents
+- `docs_get_metadata(document_id)` - **NEW!** Get document stats (words, paragraphs, tables, suggestions)
 - `docs_read(document_id)` - Read document content
+- `docs_find_text(document_id, search_text, match_case)` - **NEW!** Find text and get positions
+- `docs_get_text_at_range(document_id, start_index, end_index)` - **NEW!** Extract text from range
+- `docs_list_inline_objects(document_id)` - **NEW!** List images, tables, drawings with positions
+- `docs_get_links(document_id)` - **NEW!** List all hyperlinks with URLs and positions
+- `docs_copy_content_between_docs(source_doc_id, target_doc_id, source_start, source_end, target_index)` - **NEW!** Copy between docs
 - `docs_append_text(document_id, text)` - Append text
 - `docs_insert_text(document_id, text, index)` - Insert text at position
 - `docs_replace_text(document_id, find_text, replace_text, match_case)` - Find and replace

@@ -2501,6 +2501,73 @@ def docs_create(title: str, parent_id: Optional[str] = None, drive_id: Optional[
 
 
 @mcp.tool()
+def docs_get_metadata(document_id: str) -> str:
+    """Get document metadata including title, revision info, and statistics.
+
+    Returns document ID, title, revision ID, and useful document information.
+    """
+    service = get_service('docs', 'v1')
+    doc = service.documents().get(documentId=document_id).execute()
+
+    title = doc.get('title', 'Untitled')
+    doc_id = doc.get('documentId', 'N/A')
+    revision_id = doc.get('revisionId', 'N/A')
+
+    # Count content
+    body_content = doc.get('body', {}).get('content', [])
+    paragraph_count = sum(1 for elem in body_content if 'paragraph' in elem)
+    table_count = sum(1 for elem in body_content if 'table' in elem)
+
+    # Count text
+    total_text = []
+    for element in body_content:
+        if 'paragraph' in element:
+            for elem in element['paragraph'].get('elements', []):
+                if 'textRun' in elem:
+                    total_text.append(elem['textRun'].get('content', ''))
+
+    text_content = ''.join(total_text)
+    word_count = len(text_content.split())
+    char_count = len(text_content)
+
+    output = f"Document Metadata:\n\n"
+    output += f"Title: {title}\n"
+    output += f"Document ID: {doc_id}\n"
+    output += f"Revision ID: {revision_id}\n\n"
+    output += f"Statistics:\n"
+    output += f"  Words: {word_count:,}\n"
+    output += f"  Characters: {char_count:,}\n"
+    output += f"  Paragraphs: {paragraph_count}\n"
+    output += f"  Tables: {table_count}\n"
+
+    # List suggestions if any
+    suggested_insertions = []
+    suggested_deletions = []
+
+    for element in body_content:
+        if 'paragraph' in element:
+            for elem in element['paragraph'].get('elements', []):
+                if 'textRun' in elem:
+                    text_style = elem['textRun'].get('textStyle', {})
+                    if text_style.get('link', {}).get('url'):
+                        pass  # Skip links
+                    # Check for suggestions
+                    if elem['textRun'].get('suggestedInsertionIds'):
+                        suggested_insertions.extend(elem['textRun']['suggestedInsertionIds'])
+                    if elem['textRun'].get('suggestedDeletionIds'):
+                        suggested_deletions.extend(elem['textRun']['suggestedDeletionIds'])
+
+    if suggested_insertions or suggested_deletions:
+        output += f"\nSuggestions:\n"
+        if suggested_insertions:
+            output += f"  Insertions: {len(set(suggested_insertions))}\n"
+        if suggested_deletions:
+            output += f"  Deletions: {len(set(suggested_deletions))}\n"
+
+    return output
+
+
+@mcp.tool()
 def docs_read(document_id: str) -> str:
     """Read content from a Google Doc."""
     service = get_service('docs', 'v1')
@@ -2514,6 +2581,116 @@ def docs_read(document_id: str) -> str:
                     content.append(elem['textRun'].get('content', ''))
     text = ''.join(content)
     return f"Title: {title}\n\n{'-'*60}\n\n{text}"
+
+
+@mcp.tool()
+def docs_find_text(document_id: str, search_text: str, match_case: bool = False) -> str:
+    """Find all occurrences of text in a document and return their positions.
+
+    Very useful for navigation - helps you find the indices needed for editing,
+    formatting, or inserting content near specific text.
+
+    Args:
+        document_id: The ID of the document
+        search_text: Text to search for
+        match_case: Case-sensitive search (default: False)
+
+    Returns:
+        All matches with their start and end indices, which can be used in other tools.
+    """
+    service = get_service('docs', 'v1')
+    doc = service.documents().get(documentId=document_id).execute()
+
+    matches = []
+    current_index = 1  # Docs start at index 1
+
+    for element in doc.get('body', {}).get('content', []):
+        if 'paragraph' in element:
+            for elem in element['paragraph'].get('elements', []):
+                if 'textRun' in elem:
+                    text_run = elem['textRun']
+                    content = text_run.get('content', '')
+                    start = elem.get('startIndex', current_index)
+                    end = elem.get('endIndex', current_index + len(content))
+
+                    # Search for text
+                    search_content = content if match_case else content.lower()
+                    search_query = search_text if match_case else search_text.lower()
+
+                    if search_query in search_content:
+                        # Find all occurrences in this text run
+                        offset = 0
+                        while True:
+                            pos = search_content.find(search_query, offset)
+                            if pos == -1:
+                                break
+                            match_start = start + pos
+                            match_end = match_start + len(search_text)
+                            context_start = max(0, pos - 20)
+                            context_end = min(len(content), pos + len(search_text) + 20)
+                            context = content[context_start:context_end]
+                            matches.append({
+                                'start': match_start,
+                                'end': match_end,
+                                'context': context
+                            })
+                            offset = pos + 1
+
+    if not matches:
+        return f"No matches found for '{search_text}'"
+
+    output = f"Found {len(matches)} match(es) for '{search_text}':\n\n"
+    for i, match in enumerate(matches, 1):
+        output += f"Match {i}:\n"
+        output += f"  Position: {match['start']} - {match['end']}\n"
+        output += f"  Context: ...{match['context']}...\n\n"
+
+    output += "💡 Use these indices with docs_format_text, docs_delete_content, or other editing tools!"
+    return output
+
+
+@mcp.tool()
+def docs_get_text_at_range(document_id: str, start_index: int, end_index: int) -> str:
+    """Extract text from a specific range in the document.
+
+    Useful for reading a specific section without loading the entire document.
+
+    Args:
+        document_id: The ID of the document
+        start_index: Start position (inclusive)
+        end_index: End position (exclusive)
+
+    Returns:
+        The text content within the specified range.
+    """
+    service = get_service('docs', 'v1')
+    doc = service.documents().get(documentId=document_id).execute()
+
+    extracted_text = []
+
+    for element in doc.get('body', {}).get('content', []):
+        if 'paragraph' in element:
+            for elem in element['paragraph'].get('elements', []):
+                if 'textRun' in elem:
+                    elem_start = elem.get('startIndex', 0)
+                    elem_end = elem.get('endIndex', 0)
+
+                    # Check if this element overlaps with our range
+                    if elem_end > start_index and elem_start < end_index:
+                        content = elem['textRun'].get('content', '')
+
+                        # Calculate the slice within this element
+                        slice_start = max(0, start_index - elem_start)
+                        slice_end = min(len(content), end_index - elem_start)
+
+                        extracted_text.append(content[slice_start:slice_end])
+
+    text = ''.join(extracted_text)
+
+    if not text:
+        return f"No text found in range {start_index}-{end_index}"
+
+    return f"Text from {start_index} to {end_index}:\n\n{text}"
 
 
 @mcp.tool()
@@ -3515,6 +3692,99 @@ def docs_get_structure(document_id: str) -> str:
 
 
 @mcp.tool()
+def docs_list_inline_objects(document_id: str) -> str:
+    """List all inline objects (images, tables, drawings) with their exact positions.
+
+    Very useful for finding where images and tables are located so you can
+    edit, delete, or insert content near them.
+
+    Returns:
+        Detailed list of all inline objects with their indices and properties.
+    """
+    service = get_service('docs', 'v1')
+    doc = service.documents().get(documentId=document_id).execute()
+
+    inline_objects = doc.get('inlineObjects', {})
+    tables_list = []
+    images_list = []
+    drawings_list = []
+
+    # Find all inline object references in the document
+    for element in doc.get('body', {}).get('content', []):
+        # Check for tables
+        if 'table' in element:
+            table = element['table']
+            start_idx = element.get('startIndex', 'N/A')
+            end_idx = element.get('endIndex', 'N/A')
+            rows = len(table.get('tableRows', []))
+            cols = len(table['tableRows'][0].get('tableCells', [])) if table.get('tableRows') else 0
+            tables_list.append({
+                'type': 'Table',
+                'start': start_idx,
+                'end': end_idx,
+                'size': f"{rows}x{cols}"
+            })
+
+        # Check for inline objects (images, drawings)
+        if 'paragraph' in element:
+            for elem in element['paragraph'].get('elements', []):
+                if 'inlineObjectElement' in elem:
+                    obj_id = elem['inlineObjectElement'].get('inlineObjectId')
+                    start_idx = elem.get('startIndex', 'N/A')
+                    end_idx = elem.get('endIndex', 'N/A')
+
+                    if obj_id in inline_objects:
+                        obj = inline_objects[obj_id]
+                        obj_props = obj.get('inlineObjectProperties', {})
+                        embedded_obj = obj_props.get('embeddedObject', {})
+
+                        if 'imageProperties' in embedded_obj:
+                            image_props = embedded_obj['imageProperties']
+                            images_list.append({
+                                'type': 'Image',
+                                'start': start_idx,
+                                'end': end_idx,
+                                'id': obj_id,
+                                'url': image_props.get('contentUri', 'N/A')
+                            })
+                        elif 'linkedContentReference' in embedded_obj:
+                            drawings_list.append({
+                                'type': 'Drawing',
+                                'start': start_idx,
+                                'end': end_idx,
+                                'id': obj_id
+                            })
+
+    output = f"Inline Objects in Document:\n\n"
+
+    if tables_list:
+        output += f"Tables ({len(tables_list)}):\n"
+        for t in tables_list:
+            output += f"  📊 {t['size']} table\n"
+            output += f"     Position: {t['start']} - {t['end']}\n\n"
+
+    if images_list:
+        output += f"Images ({len(images_list)}):\n"
+        for img in images_list:
+            output += f"  🖼️  Image\n"
+            output += f"     Position: {img['start']} - {img['end']}\n"
+            output += f"     ID: {img['id']}\n\n"
+
+    if drawings_list:
+        output += f"Drawings ({len(drawings_list)}):\n"
+        for d in drawings_list:
+            output += f"  ✏️  Drawing\n"
+            output += f"     Position: {d['start']} - {d['end']}\n"
+            output += f"     ID: {d['id']}\n\n"
+
+    if not tables_list and not images_list and not drawings_list:
+        output += "No inline objects found in this document.\n"
+
+    output += "💡 Use these positions to insert content before/after objects or to delete them!"
+    return output
+
+
+@mcp.tool()
 def docs_create_named_range(document_id: str, range_name: str, start_index: int, end_index: int) -> str:
     """Create a named range (text selection bookmark) for referencing content."""
     service = get_service('docs', 'v1')
@@ -3548,6 +3818,110 @@ def docs_delete_named_range(document_id: str, range_id: str) -> str:
 
     service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
     return f"✅ Deleted named range {range_id}"
+
+
+@mcp.tool()
+def docs_get_links(document_id: str) -> str:
+    """List all hyperlinks in the document with their text and URLs.
+
+    Useful for auditing links, finding broken links, or extracting references.
+
+    Returns:
+        All hyperlinks with their text, URL, and position in the document.
+    """
+    service = get_service('docs', 'v1')
+    doc = service.documents().get(documentId=document_id).execute()
+
+    links = []
+
+    for element in doc.get('body', {}).get('content', []):
+        if 'paragraph' in element:
+            for elem in element['paragraph'].get('elements', []):
+                if 'textRun' in elem:
+                    text_run = elem['textRun']
+                    text_style = text_run.get('textStyle', {})
+                    link_obj = text_style.get('link', {})
+
+                    if link_obj and link_obj.get('url'):
+                        start_idx = elem.get('startIndex', 'N/A')
+                        end_idx = elem.get('endIndex', 'N/A')
+                        link_text = text_run.get('content', '').strip()
+                        url = link_obj['url']
+
+                        links.append({
+                            'text': link_text,
+                            'url': url,
+                            'start': start_idx,
+                            'end': end_idx
+                        })
+
+    if not links:
+        return "No hyperlinks found in this document."
+
+    output = f"Found {len(links)} hyperlink(s):\n\n"
+
+    for i, link in enumerate(links, 1):
+        output += f"{i}. \"{link['text']}\"\n"
+        output += f"   URL: {link['url']}\n"
+        output += f"   Position: {link['start']} - {link['end']}\n\n"
+
+    output += "💡 Use these positions to update or remove links with docs_delete_content or docs_add_hyperlink!"
+    return output
+
+
+@mcp.tool()
+def docs_copy_content_between_docs(source_doc_id: str, target_doc_id: str,
+                                   source_start: int, source_end: int,
+                                   target_index: int) -> str:
+    """Copy content from one document to another.
+
+    Very useful for combining documents or moving sections between docs.
+
+    Args:
+        source_doc_id: ID of the source document
+        target_doc_id: ID of the target document
+        source_start: Start index in source document
+        source_end: End index in source document
+        target_index: Position in target document to insert
+
+    Returns:
+        Confirmation of the copy operation.
+    """
+    service = get_service('docs', 'v1')
+
+    # Get text from source
+    source_doc = service.documents().get(documentId=source_doc_id).execute()
+
+    extracted_text = []
+    for element in source_doc.get('body', {}).get('content', []):
+        if 'paragraph' in element:
+            for elem in element['paragraph'].get('elements', []):
+                if 'textRun' in elem:
+                    elem_start = elem.get('startIndex', 0)
+                    elem_end = elem.get('endIndex', 0)
+
+                    if elem_end > source_start and elem_start < source_end:
+                        content = elem['textRun'].get('content', '')
+                        slice_start = max(0, source_start - elem_start)
+                        slice_end = min(len(content), source_end - elem_start)
+                        extracted_text.append(content[slice_start:slice_end])
+
+    text_to_copy = ''.join(extracted_text)
+
+    if not text_to_copy:
+        return f"❌ No text found in source range {source_start}-{source_end}"
+
+    # Insert into target
+    requests = [{
+        'insertText': {
+            'location': {'index': target_index},
+            'text': text_to_copy
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=target_doc_id, body={'requests': requests}).execute()
+
+    return f"✅ Copied {len(text_to_copy)} characters from source document to target!\nInserted at position: {target_index}"
 
 
 # ============================================================================
