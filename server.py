@@ -338,6 +338,134 @@ def drive_share_file(file_id: str, email: str, role: str = "reader", drive_id: O
     return f"✅ Shared file {file_id} with {email} as {role}"
 
 
+@mcp.tool()
+def drive_download_file(file_id: str, destination_path: str, drive_id: Optional[str] = None) -> str:
+    """Download a file from Google Drive to local filesystem."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    # Get file metadata to check if it's a Google Workspace file
+    file_metadata = service.files().get(fileId=file_id, fields='name, mimeType', **params).execute()
+    file_name = file_metadata['name']
+    mime_type = file_metadata['mimeType']
+
+    # Handle Google Workspace files (need to export)
+    export_mimes = {
+        'application/vnd.google-apps.document': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.google-apps.spreadsheet': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.google-apps.presentation': 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    }
+
+    dest_path = Path(destination_path)
+
+    if mime_type in export_mimes:
+        # Export Google Workspace file
+        request = service.files().export_media(fileId=file_id, mimeType=export_mimes[mime_type])
+    else:
+        # Download regular file
+        request = service.files().get_media(fileId=file_id, **params)
+
+    fh = io.FileIO(dest_path, 'wb')
+    downloader = MediaIoBaseDownload(fh, request)
+
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
+
+    return f"✅ Downloaded file!\nName: {file_name}\nSaved to: {dest_path}"
+
+
+@mcp.tool()
+def drive_move_file(file_id: str, new_parent_id: str, drive_id: Optional[str] = None) -> str:
+    """Move a file to a different folder."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    # Get current parents
+    file = service.files().get(fileId=file_id, fields='parents', **params).execute()
+    previous_parents = ",".join(file.get('parents', []))
+
+    # Move file
+    file = service.files().update(
+        fileId=file_id,
+        addParents=new_parent_id,
+        removeParents=previous_parents,
+        fields='id, name, parents',
+        **params
+    ).execute()
+
+    return f"✅ Moved file!\nFile ID: {file['id']}\nNew parent: {new_parent_id}"
+
+
+@mcp.tool()
+def drive_get_file_metadata(file_id: str, drive_id: Optional[str] = None) -> str:
+    """Get detailed metadata about a file."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    file = service.files().get(
+        fileId=file_id,
+        fields='id, name, mimeType, size, createdTime, modifiedTime, owners, sharingUser, webViewLink, webContentLink',
+        **params
+    ).execute()
+
+    output = f"File: {file['name']}\n"
+    output += f"ID: {file['id']}\n"
+    output += f"Type: {file['mimeType']}\n"
+    output += f"Size: {file.get('size', 'N/A')} bytes\n"
+    output += f"Created: {file.get('createdTime', 'N/A')}\n"
+    output += f"Modified: {file.get('modifiedTime', 'N/A')}\n"
+    output += f"View Link: {file.get('webViewLink', 'N/A')}\n"
+
+    if 'owners' in file:
+        owners = ", ".join([owner.get('displayName', owner.get('emailAddress', 'Unknown')) for owner in file['owners']])
+        output += f"Owners: {owners}\n"
+
+    return output
+
+
+@mcp.tool()
+def drive_search_files(query: str, drive_id: Optional[str] = None, page_size: int = 20) -> str:
+    """Advanced file search using Google Drive query syntax. Example: 'name contains \"report\" and mimeType contains \"pdf\"'"""
+    service = get_service('drive', 'v3')
+
+    params = {
+        'q': query,
+        'pageSize': page_size,
+        'fields': 'files(id, name, mimeType, modifiedTime, size, webViewLink)',
+        'orderBy': 'modifiedTime desc'
+    }
+
+    if drive_id:
+        params['driveId'] = drive_id
+        params['corpora'] = 'drive'
+        params['includeItemsFromAllDrives'] = True
+        params['supportsAllDrives'] = True
+    else:
+        params['corpora'] = 'user'
+
+    results = service.files().list(**params).execute()
+    files = results.get('files', [])
+
+    if not files:
+        return f"No files found matching: {query}"
+
+    output = f"Found {len(files)} file(s) matching '{query}':\n\n"
+    for file in files:
+        icon = "📁" if file['mimeType'] == 'application/vnd.google-apps.folder' else "📄"
+        size = f"{file.get('size', 'N/A')} bytes" if 'size' in file else 'N/A'
+        output += f"{icon} {file['name']}\n"
+        output += f"   ID: {file['id']}\n"
+        output += f"   Size: {size}\n"
+        output += f"   Modified: {file.get('modifiedTime', 'N/A')}\n"
+        output += f"   Link: {file.get('webViewLink', 'N/A')}\n\n"
+
+    return output
+
+
 # ============================================================================
 # CALENDAR TOOLS
 # ============================================================================
@@ -397,6 +525,34 @@ def calendar_create_event(summary: str, start_time: str, end_time: str,
 
 
 @mcp.tool()
+def calendar_update_event(event_id: str, summary: Optional[str] = None, start_time: Optional[str] = None,
+                          end_time: Optional[str] = None, description: Optional[str] = None,
+                          location: Optional[str] = None, attendees: Optional[str] = None) -> str:
+    """Update an existing calendar event. Provide only the fields you want to change."""
+    service = get_service('calendar', 'v3')
+
+    # Get existing event
+    event = service.events().get(calendarId='primary', eventId=event_id).execute()
+
+    # Update only provided fields
+    if summary:
+        event['summary'] = summary
+    if start_time:
+        event['start'] = {'dateTime': start_time, 'timeZone': 'UTC'}
+    if end_time:
+        event['end'] = {'dateTime': end_time, 'timeZone': 'UTC'}
+    if description is not None:
+        event['description'] = description
+    if location is not None:
+        event['location'] = location
+    if attendees:
+        event['attendees'] = [{'email': email.strip()} for email in attendees.split(',')]
+
+    updated = service.events().update(calendarId='primary', eventId=event_id, body=event).execute()
+    return f"✅ Event updated!\nID: {updated['id']}\nSummary: {updated['summary']}\nLink: {updated.get('htmlLink', 'N/A')}"
+
+
+@mcp.tool()
 def calendar_delete_event(event_id: str) -> str:
     """Delete a calendar event."""
     service = get_service('calendar', 'v3')
@@ -443,6 +599,94 @@ def docs_append_text(document_id: str, text: str) -> str:
     requests = [{'insertText': {'location': {'index': 1}, 'text': text}}]
     service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
     return f"✅ Text appended to document {document_id}"
+
+
+@mcp.tool()
+def docs_insert_text(document_id: str, text: str, index: int) -> str:
+    """Insert text at a specific position in a Google Doc. Index 1 is the start of the document."""
+    service = get_service('docs', 'v1')
+    requests = [{'insertText': {'location': {'index': index}, 'text': text}}]
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Inserted text at position {index}"
+
+
+@mcp.tool()
+def docs_replace_text(document_id: str, find_text: str, replace_text: str, match_case: bool = False) -> str:
+    """Find and replace text in a Google Doc."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'replaceAllText': {
+            'containsText': {
+                'text': find_text,
+                'matchCase': match_case
+            },
+            'replaceText': replace_text
+        }
+    }]
+
+    response = service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    occurrences = response.get('replies', [{}])[0].get('replaceAllText', {}).get('occurrencesChanged', 0)
+
+    return f"✅ Replaced {occurrences} occurrence(s) of '{find_text}' with '{replace_text}'"
+
+
+@mcp.tool()
+def docs_format_text(document_id: str, start_index: int, end_index: int,
+                     bold: Optional[bool] = None, italic: Optional[bool] = None,
+                     underline: Optional[bool] = None, font_size: Optional[int] = None) -> str:
+    """Apply formatting to text in a Google Doc. Specify start and end index of text to format."""
+    service = get_service('docs', 'v1')
+
+    text_style = {}
+    if bold is not None:
+        text_style['bold'] = bold
+    if italic is not None:
+        text_style['italic'] = italic
+    if underline is not None:
+        text_style['underline'] = underline
+    if font_size is not None:
+        text_style['fontSize'] = {'magnitude': font_size, 'unit': 'PT'}
+
+    requests = [{
+        'updateTextStyle': {
+            'range': {
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'textStyle': text_style,
+            'fields': ','.join(text_style.keys())
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+
+    formatting = []
+    if bold: formatting.append("bold")
+    if italic: formatting.append("italic")
+    if underline: formatting.append("underline")
+    if font_size: formatting.append(f"font size {font_size}")
+
+    return f"✅ Applied formatting ({', '.join(formatting)}) to text at indices {start_index}-{end_index}"
+
+
+@mcp.tool()
+def docs_insert_table(document_id: str, rows: int, columns: int, index: int) -> str:
+    """Insert a table at a specific position in a Google Doc."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'insertTable': {
+            'rows': rows,
+            'columns': columns,
+            'location': {
+                'index': index
+            }
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Inserted {rows}x{columns} table at position {index}"
 
 
 # ============================================================================
@@ -511,6 +755,110 @@ def sheets_append(spreadsheet_id: str, range_name: str, values: str) -> str:
     return f"✅ Appended {result.get('updates', {}).get('updatedRows', 0)} row(s)"
 
 
+@mcp.tool()
+def sheets_clear(spreadsheet_id: str, range_name: str) -> str:
+    """Clear all data in a specific range of a Google Sheet."""
+    service = get_service('sheets', 'v4')
+    service.spreadsheets().values().clear(
+        spreadsheetId=spreadsheet_id,
+        range=range_name
+    ).execute()
+    return f"✅ Cleared data in range {range_name}"
+
+
+@mcp.tool()
+def sheets_get_metadata(spreadsheet_id: str) -> str:
+    """Get spreadsheet metadata including sheet names, IDs, and properties."""
+    service = get_service('sheets', 'v4')
+    spreadsheet = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+
+    output = f"Spreadsheet: {spreadsheet.get('properties', {}).get('title', 'Untitled')}\n"
+    output += f"ID: {spreadsheet_id}\n"
+    output += f"Sheets: {len(spreadsheet.get('sheets', []))}\n\n"
+
+    for sheet in spreadsheet.get('sheets', []):
+        props = sheet.get('properties', {})
+        output += f"📊 {props.get('title', 'Untitled')}\n"
+        output += f"   Sheet ID: {props.get('sheetId')}\n"
+        output += f"   Rows: {props.get('gridProperties', {}).get('rowCount', 'N/A')}\n"
+        output += f"   Columns: {props.get('gridProperties', {}).get('columnCount', 'N/A')}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def sheets_create_sheet_tab(spreadsheet_id: str, sheet_name: str) -> str:
+    """Add a new sheet tab to an existing spreadsheet."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'addSheet': {
+            'properties': {
+                'title': sheet_name
+            }
+        }
+    }]
+
+    response = service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    new_sheet_id = response['replies'][0]['addSheet']['properties']['sheetId']
+    return f"✅ Created new sheet tab '{sheet_name}'\nSheet ID: {new_sheet_id}"
+
+
+@mcp.tool()
+def sheets_format_cells(spreadsheet_id: str, sheet_id: int, start_row: int, end_row: int,
+                        start_col: int, end_col: int, bold: Optional[bool] = None,
+                        background_color: Optional[str] = None, text_color: Optional[str] = None) -> str:
+    """Format cells in a Google Sheet. Colors in hex format like '#FF0000'. Rows and columns are 0-indexed."""
+    service = get_service('sheets', 'v4')
+
+    cell_format = {}
+
+    if bold is not None:
+        cell_format['textFormat'] = {'bold': bold}
+
+    if background_color:
+        # Convert hex to RGB
+        r = int(background_color[1:3], 16) / 255
+        g = int(background_color[3:5], 16) / 255
+        b = int(background_color[5:7], 16) / 255
+        cell_format['backgroundColor'] = {'red': r, 'green': g, 'blue': b}
+
+    if text_color:
+        r = int(text_color[1:3], 16) / 255
+        g = int(text_color[3:5], 16) / 255
+        b = int(text_color[5:7], 16) / 255
+        if 'textFormat' not in cell_format:
+            cell_format['textFormat'] = {}
+        cell_format['textFormat']['foregroundColor'] = {'red': r, 'green': g, 'blue': b}
+
+    requests = [{
+        'repeatCell': {
+            'range': {
+                'sheetId': sheet_id,
+                'startRowIndex': start_row,
+                'endRowIndex': end_row,
+                'startColumnIndex': start_col,
+                'endColumnIndex': end_col
+            },
+            'cell': {
+                'userEnteredFormat': cell_format
+            },
+            'fields': 'userEnteredFormat(' + ','.join(cell_format.keys()) + ')'
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Formatted cells in range (rows {start_row}-{end_row}, cols {start_col}-{end_col})"
+
+
 # ============================================================================
 # SLIDES TOOLS
 # ============================================================================
@@ -525,6 +873,143 @@ def slides_create(title: str, parent_id: Optional[str] = None, drive_id: Optiona
     params = {'supportsAllDrives': True} if drive_id else {}
     slides = drive_service.files().create(body=file_metadata, fields='id, name, webViewLink', **params).execute()
     return f"✅ Google Slides created!\nTitle: {slides['name']}\nID: {slides['id']}\nLink: {slides.get('webViewLink', 'N/A')}"
+
+
+@mcp.tool()
+def slides_get_details(presentation_id: str) -> str:
+    """Get presentation details including slide count and structure."""
+    service = get_service('slides', 'v1')
+    presentation = service.presentations().get(presentationId=presentation_id).execute()
+
+    output = f"Presentation: {presentation.get('title', 'Untitled')}\n"
+    output += f"ID: {presentation_id}\n"
+    output += f"Slides: {len(presentation.get('slides', []))}\n\n"
+
+    for idx, slide in enumerate(presentation.get('slides', []), 1):
+        output += f"Slide {idx}:\n"
+        output += f"  ID: {slide['objectId']}\n"
+
+        # Count text elements
+        text_count = 0
+        for element in slide.get('pageElements', []):
+            if 'shape' in element and 'text' in element['shape']:
+                text_count += 1
+        output += f"  Text elements: {text_count}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def slides_read(presentation_id: str) -> str:
+    """Read all text content from a presentation."""
+    service = get_service('slides', 'v1')
+    presentation = service.presentations().get(presentationId=presentation_id).execute()
+
+    output = f"Presentation: {presentation.get('title', 'Untitled')}\n"
+    output += f"{'-'*60}\n\n"
+
+    for idx, slide in enumerate(presentation.get('slides', []), 1):
+        output += f"=== Slide {idx} ===\n"
+
+        for element in slide.get('pageElements', []):
+            if 'shape' in element and 'text' in element['shape']:
+                text_elements = element['shape']['text'].get('textElements', [])
+                for text_elem in text_elements:
+                    if 'textRun' in text_elem:
+                        output += text_elem['textRun'].get('content', '')
+
+        output += "\n\n"
+
+    return output
+
+
+@mcp.tool()
+def slides_add_slide(presentation_id: str, index: Optional[int] = None) -> str:
+    """Add a new blank slide to presentation. Index starts at 0 (default: append to end)."""
+    service = get_service('slides', 'v1')
+
+    # Generate a unique ID for the new slide
+    slide_id = f'slide_{datetime.now().timestamp()}'
+
+    requests = [{
+        'createSlide': {
+            'objectId': slide_id,
+            'insertionIndex': index if index is not None else None
+        }
+    }]
+
+    response = service.presentations().batchUpdate(
+        presentationId=presentation_id,
+        body={'requests': requests}
+    ).execute()
+
+    created_slide_id = response['replies'][0]['createSlide']['objectId']
+    return f"✅ New slide added!\nSlide ID: {created_slide_id}\nPresentation: {presentation_id}"
+
+
+@mcp.tool()
+def slides_add_text(presentation_id: str, slide_id: str, text: str,
+                    x: float = 100, y: float = 100, width: float = 400, height: float = 100) -> str:
+    """Add a text box to a slide. Coordinates in points (1 inch = 72 points)."""
+    service = get_service('slides', 'v1')
+
+    # Generate unique ID for text box
+    text_box_id = f'textbox_{datetime.now().timestamp()}'
+
+    requests = [
+        {
+            'createShape': {
+                'objectId': text_box_id,
+                'shapeType': 'TEXT_BOX',
+                'elementProperties': {
+                    'pageObjectId': slide_id,
+                    'size': {
+                        'width': {'magnitude': width, 'unit': 'PT'},
+                        'height': {'magnitude': height, 'unit': 'PT'}
+                    },
+                    'transform': {
+                        'scaleX': 1,
+                        'scaleY': 1,
+                        'translateX': x,
+                        'translateY': y,
+                        'unit': 'PT'
+                    }
+                }
+            }
+        },
+        {
+            'insertText': {
+                'objectId': text_box_id,
+                'text': text
+            }
+        }
+    ]
+
+    service.presentations().batchUpdate(
+        presentationId=presentation_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Text added to slide!\nText: {text[:50]}...\nSlide: {slide_id}"
+
+
+@mcp.tool()
+def slides_delete_slide(presentation_id: str, slide_id: str) -> str:
+    """Delete a slide from presentation."""
+    service = get_service('slides', 'v1')
+
+    requests = [{
+        'deleteObject': {
+            'objectId': slide_id
+        }
+    }]
+
+    service.presentations().batchUpdate(
+        presentationId=presentation_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Slide deleted!\nSlide ID: {slide_id}"
 
 
 # ============================================================================

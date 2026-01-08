@@ -16,7 +16,7 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 
 ## Features
 
-### 📧 Gmail (9 tools)
+### 📧 Gmail (8 tools)
 - **Search** emails with advanced Gmail queries
 - **Read** full message content with headers and body
 - **Send** emails with CC support
@@ -24,34 +24,50 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Mark as read/unread**
 - **Archive** emails
 - **Delete** emails (move to trash)
-- **Labels** management
 - Full thread support
 
-### 📁 Google Drive (7 tools) - **Full Shared Drives Support!**
+### 📁 Google Drive (12 tools) - **Full Shared Drives Support!**
 - **List all shared drives** you have access to
 - **List files** in any folder (My Drive or Shared Drives)
 - **Create folders** in My Drive or Shared Drives
 - **Upload files** to any location including Shared Drives
+- **Download files** to local filesystem (exports Google Docs as DOCX, Sheets as XLSX, etc.)
 - **Delete** files and folders
 - **Copy** files
+- **Move** files between folders
 - **Share** files with specific users (reader, writer, commenter roles)
+- **Get file metadata** with detailed information
+- **Search files** with advanced query syntax
 - Works seamlessly with both My Drive and Team Drives
 
-### 📝 Google Docs (3 tools)
+### 📝 Google Docs (7 tools)
 - **Create** documents in My Drive or Shared Drives
 - **Read** full document content
 - **Append** text to existing documents
+- **Insert** text at specific positions
+- **Replace** text (find and replace)
+- **Format** text (bold, italic, underline, font size)
+- **Insert tables** into documents
 - Full shared drive support
 
-### 📊 Google Sheets (4 tools)
+### 📊 Google Sheets (8 tools)
 - **Create** spreadsheets in any location
 - **Read** data from any range
 - **Write** data to specific cells/ranges
 - **Append** rows to existing sheets
+- **Clear** data from ranges
+- **Get metadata** (sheet names, IDs, properties)
+- **Create sheet tabs** in existing spreadsheets
+- **Format cells** (bold, colors, etc.)
 - Formula support via USER_ENTERED mode
 
-### 🎨 Google Slides (1 tool)
+### 🎨 Google Slides (6 tools)
 - **Create** presentations in My Drive or Shared Drives
+- **Get details** about presentations (slide count, structure)
+- **Read** all text content from presentations
+- **Add slides** to presentations
+- **Add text** boxes to slides
+- **Delete** slides from presentations
 - Full shared drive support
 
 ### 📋 Google Forms (5 tools)
@@ -61,9 +77,10 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Add multiple choice** questions
 - **List responses** with full answer data
 
-### 📅 Google Calendar (3 tools)
+### 📅 Google Calendar (4 tools)
 - **List** upcoming events
 - **Create** events with attendees and location
+- **Update** existing events
 - **Delete** events
 - Full timezone support
 
@@ -208,9 +225,9 @@ Search my Gmail for emails from john@example.com sent this week
 Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz789
 ```
 
-## Available Tools (35+ Tools Total)
+## Available Tools (54 Tools Total)
 
-### Gmail Tools (7 tools)
+### Gmail Tools (8 tools)
 - `gmail_search(query, max_results)` - Search emails with Gmail query syntax
 - `gmail_read(message_id)` - Read full email content
 - `gmail_send(to, subject, body, cc)` - Send new emails
@@ -220,28 +237,45 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `gmail_archive(message_id)` - Archive email (remove from inbox)
 - `gmail_delete(message_id)` - Move email to trash
 
-### Drive Tools (7 tools)
+### Drive Tools (12 tools)
 - `drive_list_shared_drives(page_size)` - List all shared drives you have access to
 - `drive_list_files(folder_id, drive_id, query, page_size)` - List files in folders
 - `drive_create_folder(name, parent_id, drive_id)` - Create folders anywhere
 - `drive_upload_file(file_path, name, parent_id, drive_id)` - Upload files
+- `drive_download_file(file_id, destination_path, drive_id)` - Download files to local filesystem
 - `drive_delete_file(file_id, drive_id)` - Delete files/folders
 - `drive_copy_file(file_id, new_name, parent_id, drive_id)` - Copy files
+- `drive_move_file(file_id, new_parent_id, drive_id)` - Move files between folders
 - `drive_share_file(file_id, email, role, drive_id)` - Share with users
+- `drive_get_file_metadata(file_id, drive_id)` - Get detailed file information
+- `drive_search_files(query, drive_id, page_size)` - Advanced file search
 
-### Docs Tools (3 tools)
+### Docs Tools (7 tools)
 - `docs_create(title, parent_id, drive_id)` - Create documents
 - `docs_read(document_id)` - Read document content
 - `docs_append_text(document_id, text)` - Append text
+- `docs_insert_text(document_id, text, index)` - Insert text at position
+- `docs_replace_text(document_id, find_text, replace_text, match_case)` - Find and replace
+- `docs_format_text(document_id, start_index, end_index, bold, italic, underline, font_size)` - Format text
+- `docs_insert_table(document_id, rows, columns, index)` - Insert table
 
-### Sheets Tools (4 tools)
+### Sheets Tools (8 tools)
 - `sheets_create(title, parent_id, drive_id)` - Create spreadsheets
 - `sheets_read(spreadsheet_id, range_name)` - Read cell data
 - `sheets_write(spreadsheet_id, range_name, values)` - Write/update cells
 - `sheets_append(spreadsheet_id, range_name, values)` - Append rows
+- `sheets_clear(spreadsheet_id, range_name)` - Clear range data
+- `sheets_get_metadata(spreadsheet_id)` - Get spreadsheet metadata
+- `sheets_create_sheet_tab(spreadsheet_id, sheet_name)` - Add new sheet tab
+- `sheets_format_cells(spreadsheet_id, sheet_id, start_row, end_row, start_col, end_col, bold, background_color, text_color)` - Format cells
 
-### Slides Tools (1 tool)
+### Slides Tools (6 tools)
 - `slides_create(title, parent_id, drive_id)` - Create presentations
+- `slides_get_details(presentation_id)` - Get presentation details
+- `slides_read(presentation_id)` - Read all text content
+- `slides_add_slide(presentation_id, index)` - Add new slide
+- `slides_add_text(presentation_id, slide_id, text, x, y, width, height)` - Add text box to slide
+- `slides_delete_slide(presentation_id, slide_id)` - Delete slide
 
 ### Forms Tools (5 tools)
 - `forms_create(title, description)` - Create new forms
@@ -250,9 +284,10 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `forms_add_multiple_choice(form_id, question_text, options, required)` - Add choice questions
 - `forms_list_responses(form_id)` - Get all form responses
 
-### Calendar Tools (3 tools)
+### Calendar Tools (4 tools)
 - `calendar_list_events(max_results, time_min)` - List upcoming events
 - `calendar_create_event(summary, start_time, end_time, description, location, attendees)` - Create events
+- `calendar_update_event(event_id, summary, start_time, end_time, description, location, attendees)` - Update events
 - `calendar_delete_event(event_id)` - Delete events
 
 ### Tasks Tools (4 tools)
