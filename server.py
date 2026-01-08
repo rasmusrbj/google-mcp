@@ -1341,19 +1341,60 @@ def docs_replace_text(document_id: str, find_text: str, replace_text: str, match
 @mcp.tool()
 def docs_format_text(document_id: str, start_index: int, end_index: int,
                      bold: Optional[bool] = None, italic: Optional[bool] = None,
-                     underline: Optional[bool] = None, font_size: Optional[int] = None) -> str:
-    """Apply formatting to text in a Google Doc. Specify start and end index of text to format."""
+                     underline: Optional[bool] = None, strikethrough: Optional[bool] = None,
+                     font_size: Optional[int] = None, font_family: Optional[str] = None,
+                     text_color: Optional[str] = None, background_color: Optional[str] = None,
+                     small_caps: Optional[bool] = None, baseline_offset: Optional[str] = None) -> str:
+    """Apply formatting to text. baseline_offset: SUPERSCRIPT or SUBSCRIPT. Colors in hex like '#FF0000'."""
     service = get_service('docs', 'v1')
 
     text_style = {}
+    fields = []
+
     if bold is not None:
         text_style['bold'] = bold
+        fields.append('bold')
     if italic is not None:
         text_style['italic'] = italic
+        fields.append('italic')
     if underline is not None:
         text_style['underline'] = underline
+        fields.append('underline')
+    if strikethrough is not None:
+        text_style['strikethrough'] = strikethrough
+        fields.append('strikethrough')
+    if small_caps is not None:
+        text_style['smallCaps'] = small_caps
+        fields.append('smallCaps')
     if font_size is not None:
         text_style['fontSize'] = {'magnitude': font_size, 'unit': 'PT'}
+        fields.append('fontSize')
+    if font_family:
+        text_style['weightedFontFamily'] = {'fontFamily': font_family}
+        fields.append('weightedFontFamily')
+    if baseline_offset:
+        text_style['baselineOffset'] = baseline_offset
+        fields.append('baselineOffset')
+    if text_color:
+        r = int(text_color[1:3], 16) / 255
+        g = int(text_color[3:5], 16) / 255
+        b = int(text_color[5:7], 16) / 255
+        text_style['foregroundColor'] = {
+            'color': {
+                'rgbColor': {'red': r, 'green': g, 'blue': b}
+            }
+        }
+        fields.append('foregroundColor')
+    if background_color:
+        r = int(background_color[1:3], 16) / 255
+        g = int(background_color[3:5], 16) / 255
+        b = int(background_color[5:7], 16) / 255
+        text_style['backgroundColor'] = {
+            'color': {
+                'rgbColor': {'red': r, 'green': g, 'blue': b}
+            }
+        }
+        fields.append('backgroundColor')
 
     requests = [{
         'updateTextStyle': {
@@ -1362,19 +1403,13 @@ def docs_format_text(document_id: str, start_index: int, end_index: int,
                 'endIndex': end_index
             },
             'textStyle': text_style,
-            'fields': ','.join(text_style.keys())
+            'fields': ','.join(fields)
         }
     }]
 
     service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
 
-    formatting = []
-    if bold: formatting.append("bold")
-    if italic: formatting.append("italic")
-    if underline: formatting.append("underline")
-    if font_size: formatting.append(f"font size {font_size}")
-
-    return f"✅ Applied formatting ({', '.join(formatting)}) to text at indices {start_index}-{end_index}"
+    return f"✅ Applied formatting to text at indices {start_index}-{end_index}"
 
 
 @mcp.tool()
@@ -1616,6 +1651,686 @@ def docs_add_bookmark(document_id: str, index: int, bookmark_name: str) -> str:
     bookmark_id = response['replies'][0]['createNamedRange']['namedRangeId']
 
     return f"✅ Bookmark '{bookmark_name}' created at position {index}\nBookmark ID: {bookmark_id}"
+
+
+@mcp.tool()
+def docs_insert_table_row(document_id: str, table_start_index: int, row_index: int, insert_below: bool = True) -> str:
+    """Insert a new row in a table. row_index is 0-based. insert_below=True inserts below the row, False inserts above."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'insertTableRow': {
+            'tableCellLocation': {
+                'tableStartLocation': {
+                    'index': table_start_index
+                },
+                'rowIndex': row_index,
+                'columnIndex': 0
+            },
+            'insertBelow': insert_below
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    position = "below" if insert_below else "above"
+    return f"✅ Inserted row {position} row {row_index}"
+
+
+@mcp.tool()
+def docs_insert_table_column(document_id: str, table_start_index: int, column_index: int, insert_right: bool = True) -> str:
+    """Insert a new column in a table. column_index is 0-based. insert_right=True inserts to the right, False inserts to the left."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'insertTableColumn': {
+            'tableCellLocation': {
+                'tableStartLocation': {
+                    'index': table_start_index
+                },
+                'rowIndex': 0,
+                'columnIndex': column_index
+            },
+            'insertRight': insert_right
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    position = "right of" if insert_right else "left of"
+    return f"✅ Inserted column {position} column {column_index}"
+
+
+@mcp.tool()
+def docs_delete_table_row(document_id: str, table_start_index: int, row_index: int) -> str:
+    """Delete a row from a table. row_index is 0-based."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'deleteTableRow': {
+            'tableCellLocation': {
+                'tableStartLocation': {
+                    'index': table_start_index
+                },
+                'rowIndex': row_index,
+                'columnIndex': 0
+            }
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Deleted row {row_index} from table"
+
+
+@mcp.tool()
+def docs_delete_table_column(document_id: str, table_start_index: int, column_index: int) -> str:
+    """Delete a column from a table. column_index is 0-based."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'deleteTableColumn': {
+            'tableCellLocation': {
+                'tableStartLocation': {
+                    'index': table_start_index
+                },
+                'rowIndex': 0,
+                'columnIndex': column_index
+            }
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Deleted column {column_index} from table"
+
+
+@mcp.tool()
+def docs_delete_table(document_id: str, table_start_index: int) -> str:
+    """Delete an entire table from the document."""
+    service = get_service('docs', 'v1')
+
+    # Get the document to find the table end index
+    doc = service.documents().get(documentId=document_id).execute()
+
+    table_end_index = None
+    for element in doc.get('body', {}).get('content', []):
+        if 'table' in element and element['startIndex'] == table_start_index:
+            table_end_index = element['endIndex']
+            break
+
+    if not table_end_index:
+        return f"❌ Could not find table at index {table_start_index}"
+
+    requests = [{
+        'deleteContentRange': {
+            'range': {
+                'startIndex': table_start_index,
+                'endIndex': table_end_index
+            }
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Deleted table at index {table_start_index}"
+
+
+@mcp.tool()
+def docs_merge_table_cells(document_id: str, table_start_index: int, start_row: int, end_row: int,
+                            start_col: int, end_col: int) -> str:
+    """Merge table cells. Indices are 0-based. end_row and end_col are exclusive."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'mergeTableCells': {
+            'tableRange': {
+                'tableCellLocation': {
+                    'tableStartLocation': {
+                        'index': table_start_index
+                    },
+                    'rowIndex': start_row,
+                    'columnIndex': start_col
+                },
+                'rowSpan': end_row - start_row,
+                'columnSpan': end_col - start_col
+            }
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Merged cells from row {start_row}-{end_row-1}, col {start_col}-{end_col-1}"
+
+
+@mcp.tool()
+def docs_unmerge_table_cells(document_id: str, table_start_index: int, row: int, col: int) -> str:
+    """Unmerge a merged table cell. Specify the top-left cell of the merged range."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'unmergeTableCells': {
+            'tableRange': {
+                'tableCellLocation': {
+                    'tableStartLocation': {
+                        'index': table_start_index
+                    },
+                    'rowIndex': row,
+                    'columnIndex': col
+                },
+                'rowSpan': 1,
+                'columnSpan': 1
+            }
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Unmerged cell at row {row}, col {col}"
+
+
+@mcp.tool()
+def docs_format_table_cells(document_id: str, table_start_index: int, start_row: int, end_row: int,
+                             start_col: int, end_col: int, background_color: Optional[str] = None,
+                             border_width: Optional[int] = None, border_color: Optional[str] = None) -> str:
+    """Format table cells with background color and borders. Colors in hex like '#FF0000'. Indices 0-based, end indices exclusive."""
+    service = get_service('docs', 'v1')
+
+    requests = []
+
+    # Background color
+    if background_color:
+        r = int(background_color[1:3], 16) / 255
+        g = int(background_color[3:5], 16) / 255
+        b = int(background_color[5:7], 16) / 255
+
+        requests.append({
+            'updateTableCellStyle': {
+                'tableRange': {
+                    'tableCellLocation': {
+                        'tableStartLocation': {
+                            'index': table_start_index
+                        },
+                        'rowIndex': start_row,
+                        'columnIndex': start_col
+                    },
+                    'rowSpan': end_row - start_row,
+                    'columnSpan': end_col - start_col
+                },
+                'tableCellStyle': {
+                    'backgroundColor': {
+                        'color': {
+                            'rgbColor': {'red': r, 'green': g, 'blue': b}
+                        }
+                    }
+                },
+                'fields': 'backgroundColor'
+            }
+        })
+
+    # Borders
+    if border_width is not None and border_color:
+        r = int(border_color[1:3], 16) / 255
+        g = int(border_color[3:5], 16) / 255
+        b = int(border_color[5:7], 16) / 255
+
+        border_style = {
+            'width': {
+                'magnitude': border_width,
+                'unit': 'PT'
+            },
+            'color': {
+                'color': {
+                    'rgbColor': {'red': r, 'green': g, 'blue': b}
+                }
+            }
+        }
+
+        requests.append({
+            'updateTableCellStyle': {
+                'tableRange': {
+                    'tableCellLocation': {
+                        'tableStartLocation': {
+                            'index': table_start_index
+                        },
+                        'rowIndex': start_row,
+                        'columnIndex': start_col
+                    },
+                    'rowSpan': end_row - start_row,
+                    'columnSpan': end_col - start_col
+                },
+                'tableCellStyle': {
+                    'borderTop': border_style,
+                    'borderBottom': border_style,
+                    'borderLeft': border_style,
+                    'borderRight': border_style
+                },
+                'fields': 'borderTop,borderBottom,borderLeft,borderRight'
+            }
+        })
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Formatted table cells (rows {start_row}-{end_row-1}, cols {start_col}-{end_col-1})"
+
+
+@mcp.tool()
+def docs_set_paragraph_alignment(document_id: str, start_index: int, end_index: int, alignment: str = "START") -> str:
+    """Set paragraph alignment. alignment: START, CENTER, END, JUSTIFIED."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'updateParagraphStyle': {
+            'range': {
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'paragraphStyle': {
+                'alignment': alignment
+            },
+            'fields': 'alignment'
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Set alignment to {alignment} for paragraphs at indices {start_index}-{end_index}"
+
+
+@mcp.tool()
+def docs_set_indentation(document_id: str, start_index: int, end_index: int,
+                         start_indent: Optional[float] = None, end_indent: Optional[float] = None,
+                         first_line_indent: Optional[float] = None) -> str:
+    """Set paragraph indentation in points (72 points = 1 inch). All values optional."""
+    service = get_service('docs', 'v1')
+
+    paragraph_style = {}
+    fields = []
+
+    if start_indent is not None:
+        paragraph_style['indentStart'] = {'magnitude': start_indent, 'unit': 'PT'}
+        fields.append('indentStart')
+    if end_indent is not None:
+        paragraph_style['indentEnd'] = {'magnitude': end_indent, 'unit': 'PT'}
+        fields.append('indentEnd')
+    if first_line_indent is not None:
+        paragraph_style['indentFirstLine'] = {'magnitude': first_line_indent, 'unit': 'PT'}
+        fields.append('indentFirstLine')
+
+    requests = [{
+        'updateParagraphStyle': {
+            'range': {
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'paragraphStyle': paragraph_style,
+            'fields': ','.join(fields)
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Set indentation for paragraphs at indices {start_index}-{end_index}"
+
+
+@mcp.tool()
+def docs_set_line_spacing(document_id: str, start_index: int, end_index: int, line_spacing: float) -> str:
+    """Set line spacing as a percentage (100 = single spacing, 200 = double spacing)."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'updateParagraphStyle': {
+            'range': {
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'paragraphStyle': {
+                'lineSpacing': line_spacing
+            },
+            'fields': 'lineSpacing'
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Set line spacing to {line_spacing}% for paragraphs at indices {start_index}-{end_index}"
+
+
+@mcp.tool()
+def docs_set_spacing_before_after(document_id: str, start_index: int, end_index: int,
+                                   space_above: Optional[float] = None, space_below: Optional[float] = None) -> str:
+    """Set spacing before/after paragraphs in points (72 points = 1 inch)."""
+    service = get_service('docs', 'v1')
+
+    paragraph_style = {}
+    fields = []
+
+    if space_above is not None:
+        paragraph_style['spaceAbove'] = {'magnitude': space_above, 'unit': 'PT'}
+        fields.append('spaceAbove')
+    if space_below is not None:
+        paragraph_style['spaceBelow'] = {'magnitude': space_below, 'unit': 'PT'}
+        fields.append('spaceBelow')
+
+    requests = [{
+        'updateParagraphStyle': {
+            'range': {
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'paragraphStyle': paragraph_style,
+            'fields': ','.join(fields)
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Set paragraph spacing for indices {start_index}-{end_index}"
+
+
+@mcp.tool()
+def docs_set_text_direction(document_id: str, start_index: int, end_index: int, direction: str = "LEFT_TO_RIGHT") -> str:
+    """Set text direction. direction: LEFT_TO_RIGHT or RIGHT_TO_LEFT."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'updateParagraphStyle': {
+            'range': {
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'paragraphStyle': {
+                'direction': direction
+            },
+            'fields': 'direction'
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Set text direction to {direction} for indices {start_index}-{end_index}"
+
+
+@mcp.tool()
+def docs_insert_table_of_contents(document_id: str, index: int) -> str:
+    """Insert a table of contents at a specific position. Links to headings in the document."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'insertTableOfContents': {
+            'location': {
+                'index': index
+            }
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Inserted table of contents at position {index}"
+
+
+@mcp.tool()
+def docs_insert_section_break(document_id: str, index: int, section_type: str = "NEXT_PAGE") -> str:
+    """Insert a section break. section_type: CONTINUOUS, NEXT_PAGE, or SECTION_TYPE_UNSPECIFIED."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'insertSectionBreak': {
+            'location': {
+                'index': index
+            },
+            'sectionType': section_type
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Inserted {section_type} section break at position {index}"
+
+
+@mcp.tool()
+def docs_insert_horizontal_rule(document_id: str, index: int) -> str:
+    """Insert a horizontal rule (line) at a specific position."""
+    service = get_service('docs', 'v1')
+
+    # Horizontal rules are created by inserting a paragraph with specific formatting
+    requests = [
+        {
+            'insertText': {
+                'location': {
+                    'index': index
+                },
+                'text': '\n'
+            }
+        },
+        {
+            'updateParagraphStyle': {
+                'range': {
+                    'startIndex': index,
+                    'endIndex': index + 1
+                },
+                'paragraphStyle': {
+                    'borderBottom': {
+                        'width': {
+                            'magnitude': 1,
+                            'unit': 'PT'
+                        },
+                        'dashStyle': 'SOLID',
+                        'color': {
+                            'color': {
+                                'rgbColor': {'red': 0, 'green': 0, 'blue': 0}
+                            }
+                        }
+                    }
+                },
+                'fields': 'borderBottom'
+            }
+        }
+    ]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Inserted horizontal rule at position {index}"
+
+
+@mcp.tool()
+def docs_create_header(document_id: str, text: str, section_index: int = 0) -> str:
+    """Create or update document header. section_index identifies which section (default: first section)."""
+    service = get_service('docs', 'v1')
+
+    # Get document to find header ID
+    doc = service.documents().get(documentId=document_id).execute()
+
+    # Get first section's header ID (if exists)
+    headers = doc.get('headers', {})
+    if not headers:
+        return "❌ No headers found. Document may not support headers."
+
+    # Get the first header ID
+    header_id = list(headers.keys())[0]
+    header_content = headers[header_id].get('content', [])
+
+    # Find insertion index
+    if header_content:
+        insert_index = header_content[0].get('startIndex', 1)
+    else:
+        insert_index = 1
+
+    requests = [{
+        'insertText': {
+            'location': {
+                'segmentId': header_id,
+                'index': insert_index
+            },
+            'text': text
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Created/updated header"
+
+
+@mcp.tool()
+def docs_create_footer(document_id: str, text: str, section_index: int = 0) -> str:
+    """Create or update document footer. section_index identifies which section (default: first section)."""
+    service = get_service('docs', 'v1')
+
+    # Get document to find footer ID
+    doc = service.documents().get(documentId=document_id).execute()
+
+    # Get first section's footer ID (if exists)
+    footers = doc.get('footers', {})
+    if not footers:
+        return "❌ No footers found. Document may not support footers."
+
+    # Get the first footer ID
+    footer_id = list(footers.keys())[0]
+    footer_content = footers[footer_id].get('content', [])
+
+    # Find insertion index
+    if footer_content:
+        insert_index = footer_content[0].get('startIndex', 1)
+    else:
+        insert_index = 1
+
+    requests = [{
+        'insertText': {
+            'location': {
+                'segmentId': footer_id,
+                'index': insert_index
+            },
+            'text': text
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Created/updated footer"
+
+
+@mcp.tool()
+def docs_insert_footnote(document_id: str, index: int, footnote_text: str) -> str:
+    """Insert a footnote at a specific position with the given text."""
+    service = get_service('docs', 'v1')
+
+    requests = [
+        {
+            'createFootnote': {
+                'location': {
+                    'index': index
+                }
+            }
+        }
+    ]
+
+    # First create the footnote
+    response = service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+
+    # Get the footnote ID from the response
+    footnote_id = response['replies'][0]['createFootnote']['footnoteId']
+
+    # Now insert text into the footnote
+    # Get document to find footnote content location
+    doc = service.documents().get(documentId=document_id).execute()
+    footnotes = doc.get('footnotes', {})
+
+    if footnote_id in footnotes:
+        footnote_content = footnotes[footnote_id].get('content', [])
+        if footnote_content:
+            footnote_index = footnote_content[0].get('startIndex', 1)
+
+            text_request = [{
+                'insertText': {
+                    'location': {
+                        'segmentId': footnote_id,
+                        'index': footnote_index
+                    },
+                    'text': footnote_text
+                }
+            }]
+
+            service.documents().batchUpdate(documentId=document_id, body={'requests': text_request}).execute()
+
+    return f"✅ Inserted footnote at position {index}"
+
+
+@mcp.tool()
+def docs_get_structure(document_id: str) -> str:
+    """Get document structure including headings, tables, images, and page counts."""
+    service = get_service('docs', 'v1')
+    doc = service.documents().get(documentId=document_id).execute()
+
+    output = f"Document: {doc.get('title', 'Untitled')}\n"
+    output += f"Document ID: {document_id}\n\n"
+
+    # Count elements
+    headings = []
+    tables = []
+    images = []
+    lists = []
+
+    for element in doc.get('body', {}).get('content', []):
+        if 'paragraph' in element:
+            para = element['paragraph']
+            style = para.get('paragraphStyle', {}).get('namedStyleType', '')
+            if 'HEADING' in style:
+                # Get text content
+                text = ''
+                for elem in para.get('elements', []):
+                    if 'textRun' in elem:
+                        text += elem['textRun'].get('content', '')
+                headings.append(f"{style}: {text.strip()}")
+        elif 'table' in element:
+            table = element['table']
+            rows = len(table.get('tableRows', []))
+            cols = len(table['tableRows'][0].get('tableCells', [])) if table.get('tableRows') else 0
+            tables.append(f"{rows}x{cols} table at index {element['startIndex']}")
+        elif 'sectionBreak' in element:
+            pass  # Could count sections
+
+    # Count images by looking for inline objects
+    for element in doc.get('body', {}).get('content', []):
+        if 'paragraph' in element:
+            for elem in element['paragraph'].get('elements', []):
+                if 'inlineObjectElement' in elem:
+                    images.append(f"Image at index {elem.get('startIndex')}")
+
+    output += f"Headings ({len(headings)}):\n"
+    for h in headings[:10]:  # Limit to first 10
+        output += f"  - {h}\n"
+    if len(headings) > 10:
+        output += f"  ... and {len(headings) - 10} more\n"
+
+    output += f"\nTables ({len(tables)}):\n"
+    for t in tables:
+        output += f"  - {t}\n"
+
+    output += f"\nImages ({len(images)}):\n"
+    for i in images[:10]:
+        output += f"  - {i}\n"
+    if len(images) > 10:
+        output += f"  ... and {len(images) - 10} more\n"
+
+    return output
+
+
+@mcp.tool()
+def docs_create_named_range(document_id: str, range_name: str, start_index: int, end_index: int) -> str:
+    """Create a named range (text selection bookmark) for referencing content."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'createNamedRange': {
+            'name': range_name,
+            'range': {
+                'startIndex': start_index,
+                'endIndex': end_index
+            }
+        }
+    }]
+
+    response = service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    range_id = response['replies'][0]['createNamedRange']['namedRangeId']
+
+    return f"✅ Created named range '{range_name}'\nRange ID: {range_id}\nIndices: {start_index}-{end_index}"
+
+
+@mcp.tool()
+def docs_delete_named_range(document_id: str, range_id: str) -> str:
+    """Delete a named range by its ID."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'deleteNamedRange': {
+            'namedRangeId': range_id
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Deleted named range {range_id}"
 
 
 # ============================================================================

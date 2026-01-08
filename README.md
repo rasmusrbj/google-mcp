@@ -11,7 +11,7 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 
 ✅ **Full Shared Drive Support** - Create, read, and manage files in shared drives
 ✅ **Complete Google Workspace** - Gmail, Drive, Docs, Sheets, Slides, Forms, Chat, Calendar, Tasks
-✅ **158 Production-Ready Tools** - Comprehensive coverage of all services
+✅ **180 Production-Ready Tools** - Comprehensive coverage of all services
 ✅ **Simple Setup** - Automated installation and authentication
 ✅ **Production Ready** - Proper error handling and token refresh
 
@@ -73,23 +73,42 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **List file revisions** - View version history
 - Works seamlessly with both My Drive and Team Drives
 
-### 📝 Google Docs (16 tools)
+### 📝 Google Docs (38 tools)
 - **Create** documents in My Drive or Shared Drives
 - **Read** full document content
 - **Append** text to existing documents
 - **Insert** text at specific positions
 - **Replace** text (find and replace)
-- **Format** text (bold, italic, underline, font size)
+- **Format text** - Bold, italic, underline, strikethrough, font size, font family, text color, background color, small caps, superscript/subscript
 - **Insert tables** into documents
+- **Insert table row/column** - Add rows or columns to existing tables
+- **Delete table row/column** - Remove rows or columns
+- **Delete table** - Remove entire table
+- **Merge/unmerge table cells**
+- **Format table cells** - Background colors and borders
+- **Update table cells** with text
 - **Insert images** from URLs
 - **Add hyperlinks** to text
 - **Create bulleted lists**
 - **Create numbered lists**
 - **Set heading styles** (H1-H6, Title, Subtitle, Normal)
+- **Set paragraph alignment** - Left, center, right, justified
+- **Set indentation** - First line, start, end indentation
+- **Set line spacing** - Single, double, custom spacing
+- **Set spacing before/after** paragraphs
+- **Set text direction** - LTR or RTL
 - **Add page breaks**
+- **Insert table of contents** - Auto-generated from headings
+- **Insert section breaks** - Continuous or next page
+- **Insert horizontal rules**
+- **Create/update headers** - Document headers
+- **Create/update footers** - Document footers
+- **Insert footnotes** with text
+- **Get document structure** - Headings, tables, images overview
 - **Delete content** from ranges
-- **Update table cells** with text
 - **Add bookmarks** for internal linking
+- **Create named ranges** - Reference text selections
+- **Delete named ranges**
 - Full shared drive support
 
 ### 📊 Google Sheets (38 tools)
@@ -327,7 +346,7 @@ Search my Gmail for emails from john@example.com sent this week
 Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz789
 ```
 
-## Available Tools (158 Tools Total)
+## Available Tools (180 Tools Total)
 
 ### Gmail Tools (33 tools)
 - `gmail_search(query, max_results)` - Search emails with Gmail query syntax
@@ -387,23 +406,45 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `drive_create_shortcut(name, target_file_id, parent_id, drive_id)` - Create shortcut to file
 - `drive_list_revisions(file_id)` - List file revision history
 
-### Docs Tools (16 tools)
+### Docs Tools (38 tools)
 - `docs_create(title, parent_id, drive_id)` - Create documents
 - `docs_read(document_id)` - Read document content
 - `docs_append_text(document_id, text)` - Append text
 - `docs_insert_text(document_id, text, index)` - Insert text at position
 - `docs_replace_text(document_id, find_text, replace_text, match_case)` - Find and replace
-- `docs_format_text(document_id, start_index, end_index, bold, italic, underline, font_size)` - Format text
+- `docs_format_text(document_id, start_index, end_index, bold, italic, underline, strikethrough, font_size, font_family, text_color, background_color, small_caps, baseline_offset)` - Format text with all options
 - `docs_insert_table(document_id, rows, columns, index)` - Insert table
+- `docs_insert_table_row(document_id, table_start_index, row_index, insert_below)` - Insert table row
+- `docs_insert_table_column(document_id, table_start_index, column_index, insert_right)` - Insert table column
+- `docs_delete_table_row(document_id, table_start_index, row_index)` - Delete table row
+- `docs_delete_table_column(document_id, table_start_index, column_index)` - Delete table column
+- `docs_delete_table(document_id, table_start_index)` - Delete entire table
+- `docs_merge_table_cells(document_id, table_start_index, start_row, end_row, start_col, end_col)` - Merge table cells
+- `docs_unmerge_table_cells(document_id, table_start_index, row, col)` - Unmerge table cells
+- `docs_format_table_cells(document_id, table_start_index, start_row, end_row, start_col, end_col, background_color, border_width, border_color)` - Format table cells
+- `docs_update_table_cell(document_id, table_start_index, row, column, text)` - Write to table cell
 - `docs_insert_image(document_id, image_url, index, width, height)` - Insert image from URL
 - `docs_add_hyperlink(document_id, start_index, end_index, url)` - Add hyperlink to text
 - `docs_create_bulleted_list(document_id, start_index, end_index)` - Create bulleted list
 - `docs_create_numbered_list(document_id, start_index, end_index)` - Create numbered list
 - `docs_set_heading_style(document_id, start_index, end_index, heading_level)` - Set heading style (H1-H6, TITLE, SUBTITLE, NORMAL_TEXT)
+- `docs_set_paragraph_alignment(document_id, start_index, end_index, alignment)` - Set alignment (START, CENTER, END, JUSTIFIED)
+- `docs_set_indentation(document_id, start_index, end_index, start_indent, end_indent, first_line_indent)` - Set paragraph indentation
+- `docs_set_line_spacing(document_id, start_index, end_index, line_spacing)` - Set line spacing percentage
+- `docs_set_spacing_before_after(document_id, start_index, end_index, space_above, space_below)` - Set paragraph spacing
+- `docs_set_text_direction(document_id, start_index, end_index, direction)` - Set text direction (LTR/RTL)
 - `docs_add_page_break(document_id, index)` - Insert page break
+- `docs_insert_table_of_contents(document_id, index)` - Insert table of contents
+- `docs_insert_section_break(document_id, index, section_type)` - Insert section break
+- `docs_insert_horizontal_rule(document_id, index)` - Insert horizontal rule
+- `docs_create_header(document_id, text, section_index)` - Create/update header
+- `docs_create_footer(document_id, text, section_index)` - Create/update footer
+- `docs_insert_footnote(document_id, index, footnote_text)` - Insert footnote
+- `docs_get_structure(document_id)` - Get document structure overview
 - `docs_delete_content(document_id, start_index, end_index)` - Delete content from range
-- `docs_update_table_cell(document_id, table_start_index, row, column, text)` - Write to table cell
 - `docs_add_bookmark(document_id, index, bookmark_name)` - Add named bookmark
+- `docs_create_named_range(document_id, range_name, start_index, end_index)` - Create named range
+- `docs_delete_named_range(document_id, range_id)` - Delete named range
 
 ### Sheets Tools (38 tools)
 - `sheets_create(title, parent_id, drive_id)` - Create spreadsheets
