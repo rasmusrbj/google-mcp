@@ -361,6 +361,144 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 The setup script will provide the exact configuration for your system.
 
+## Cloud Deployment (For Claude iOS/Mobile Apps)
+
+The MCP server can be deployed to the cloud to make it accessible from Claude iOS app and other web/mobile clients.
+
+### Why Deploy to Cloud?
+
+- **Claude Desktop** uses `stdio` transport (local-only)
+- **Claude iOS/Mobile Apps** require `sse` transport (HTTP/cloud-based)
+- Cloud deployment makes your Google Workspace tools available anywhere
+
+### Quick Deploy to Railway (Recommended)
+
+Railway is the easiest way to deploy. It's **free to start** and takes about 5 minutes.
+
+#### 1. Prerequisites
+
+- [Railway account](https://railway.app/) (free)
+- This repository pushed to GitHub
+- Google OAuth credentials (from setup above)
+
+#### 2. Deploy Steps
+
+1. **Connect to Railway:**
+   - Visit [Railway](https://railway.app/)
+   - Click "Start a New Project"
+   - Select "Deploy from GitHub repo"
+   - Choose your `google-drive-shared-mcp` repository
+
+2. **Configure Environment Variables:**
+
+   In Railway dashboard, add these variables:
+
+   ```
+   TRANSPORT=sse
+   PORT=8000
+   GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your-client-secret
+   GOOGLE_REDIRECT_URI=https://your-app-name.railway.app/oauth2callback
+   ```
+
+   Replace `your-app-name` with your actual Railway app domain.
+
+3. **Update Google Cloud OAuth:**
+
+   - Go to [Google Cloud Console](https://console.cloud.google.com/) > Credentials
+   - Edit your OAuth 2.0 Client ID
+   - Add to **Authorized redirect URIs**:
+     ```
+     https://your-app-name.railway.app/oauth2callback
+     ```
+   - Save changes
+
+4. **Deploy:**
+
+   Railway will automatically:
+   - Detect `railway.json` configuration
+   - Install dependencies from `requirements.txt`
+   - Run the server with SSE transport
+   - Provide you with a public URL
+
+5. **Get Your Server URL:**
+
+   After deployment, Railway will show your app URL:
+   ```
+   https://your-app-name.railway.app
+   ```
+
+   Copy this URL - you'll need it for Claude iOS configuration.
+
+#### 3. Configure Claude iOS App
+
+1. Open **Claude iOS app**
+2. Go to **Settings** > **MCP Servers**
+3. Add new server:
+   - **Name**: Google Workspace
+   - **URL**: `https://your-app-name.railway.app`
+   - **Transport**: SSE
+
+4. **Authenticate**:
+   - The app will prompt you to authenticate
+   - Follow the OAuth flow in the browser
+   - Grant permissions to your Google Workspace
+
+5. **Start Using**:
+   - All 229 tools are now available on your iPhone/iPad!
+   - Ask: "List my shared drives", "Search my Gmail", etc.
+
+### Alternative: Deploy to Google Cloud Run
+
+If you prefer Google Cloud Run:
+
+```bash
+# Build and deploy
+gcloud run deploy google-workspace-mcp \
+  --source . \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars TRANSPORT=sse
+```
+
+Then configure the Cloud Run URL in Claude iOS app.
+
+### Environment Variables Reference
+
+See `.env.example` for all available environment variables:
+
+- `TRANSPORT` - Set to `sse` for cloud, `stdio` for local
+- `PORT` - HTTP port (Railway sets automatically)
+- `GOOGLE_CLIENT_ID` - OAuth client ID
+- `GOOGLE_CLIENT_SECRET` - OAuth client secret
+- `GOOGLE_REDIRECT_URI` - OAuth callback URL (must match cloud URL)
+
+### Security Notes
+
+**Token Storage Warning**: Railway has ephemeral filesystem, meaning OAuth tokens will be lost on restarts. For production use, implement persistent storage (database or cloud storage).
+
+**Authentication**: The current implementation stores tokens in `token.json` locally. For cloud deployment, you may need to implement:
+- Database token storage (PostgreSQL, Redis)
+- User session management
+- Token encryption at rest
+
+### Troubleshooting Cloud Deployment
+
+**OAuth Redirect Mismatch:**
+- Ensure `GOOGLE_REDIRECT_URI` matches your Railway URL exactly
+- Check Google Cloud Console > Credentials > Authorized redirect URIs
+
+**Server Not Responding:**
+- Check Railway logs: `railway logs`
+- Verify environment variables are set correctly
+- Ensure `TRANSPORT=sse` is set
+
+**Token Expired on Restart:**
+- Expected behavior with ephemeral storage
+- Re-authenticate through Claude iOS app
+- Consider implementing persistent storage
+
 ## Usage Examples
 
 ### List Shared Drives

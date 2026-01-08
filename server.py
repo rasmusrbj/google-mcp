@@ -6538,4 +6538,16 @@ def tasks_delete(task_id: str, task_list_id: str = "@default") -> str:
 
 
 if __name__ == "__main__":
-    mcp.run()
+    # Support both stdio (local) and SSE (web/mobile) transports
+    # Set TRANSPORT=sse environment variable for web deployment
+    transport = os.environ.get('TRANSPORT', 'stdio')
+
+    if transport == 'sse':
+        # SSE transport for web/mobile access (Railway, Cloud Run, etc.)
+        # Railway automatically sets PORT environment variable
+        port = int(os.environ.get('PORT', 8000))
+        print(f"Starting MCP server with SSE transport on port {port}")
+        mcp.run(transport='sse', host='0.0.0.0', port=port)
+    else:
+        # stdio transport for Claude Desktop (local)
+        mcp.run()
