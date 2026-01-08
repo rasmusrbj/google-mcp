@@ -61,6 +61,19 @@ SCOPES = [
 
 def get_credentials():
     """Get authenticated credentials with automatic user detection."""
+    # For cloud deployment, load credentials from environment variable
+    if os.environ.get('TRANSPORT') == 'sse' and os.environ.get('GOOGLE_CREDENTIALS_JSON'):
+        import json
+        creds_data = json.loads(os.environ.get('GOOGLE_CREDENTIALS_JSON'))
+        creds = Credentials.from_authorized_user_info(creds_data, SCOPES)
+
+        # Refresh token if expired (but we can't save it back in cloud mode)
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+
+        return creds
+
+    # For local deployment, load from file
     token_path = get_token_path()
     creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
 
