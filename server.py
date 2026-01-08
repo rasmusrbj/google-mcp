@@ -1173,6 +1173,651 @@ def drive_list_revisions(file_id: str) -> str:
         return f"❌ Error listing revisions: {str(e)}\nNote: Revisions are only available for Google Docs, Sheets, and Slides."
 
 
+@mcp.tool()
+def drive_create_comment(file_id: str, content: str, drive_id: Optional[str] = None) -> str:
+    """Create a comment on a file."""
+    service = get_service('drive', 'v3')
+
+    comment_body = {
+        'content': content
+    }
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    comment = service.comments().create(
+        fileId=file_id,
+        body=comment_body,
+        fields='id, content, author, createdTime',
+        **params
+    ).execute()
+
+    return f"✅ Comment created!\nComment ID: {comment['id']}\nCreated: {comment.get('createdTime')}"
+
+
+@mcp.tool()
+def drive_list_comments(file_id: str, drive_id: Optional[str] = None) -> str:
+    """List all comments on a file."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    comments = service.comments().list(
+        fileId=file_id,
+        fields='comments(id, content, author, createdTime, resolved, replies)',
+        **params
+    ).execute()
+
+    comment_list = comments.get('comments', [])
+
+    if not comment_list:
+        return f"No comments found on file {file_id}"
+
+    output = f"Found {len(comment_list)} comment(s):\n\n"
+    for comment in comment_list:
+        author = comment.get('author', {})
+        output += f"💬 {author.get('displayName', 'Unknown')}: {comment.get('content', '')}\n"
+        output += f"   ID: {comment['id']}\n"
+        output += f"   Created: {comment.get('createdTime', 'N/A')}\n"
+        output += f"   Resolved: {comment.get('resolved', False)}\n"
+
+        replies = comment.get('replies', [])
+        if replies:
+            output += f"   Replies: {len(replies)}\n"
+
+        output += "\n"
+
+    return output
+
+
+@mcp.tool()
+def drive_reply_to_comment(file_id: str, comment_id: str, content: str, drive_id: Optional[str] = None) -> str:
+    """Reply to a comment on a file."""
+    service = get_service('drive', 'v3')
+
+    reply_body = {
+        'content': content
+    }
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    reply = service.replies().create(
+        fileId=file_id,
+        commentId=comment_id,
+        body=reply_body,
+        fields='id, content, author, createdTime',
+        **params
+    ).execute()
+
+    return f"✅ Reply created!\nReply ID: {reply['id']}"
+
+
+@mcp.tool()
+def drive_delete_comment(file_id: str, comment_id: str, drive_id: Optional[str] = None) -> str:
+    """Delete a comment from a file."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    service.comments().delete(
+        fileId=file_id,
+        commentId=comment_id,
+        **params
+    ).execute()
+
+    return f"✅ Comment {comment_id} deleted"
+
+
+@mcp.tool()
+def drive_resolve_comment(file_id: str, comment_id: str, resolved: bool = True, drive_id: Optional[str] = None) -> str:
+    """Resolve or unresolve a comment."""
+    service = get_service('drive', 'v3')
+
+    comment_body = {
+        'resolved': resolved
+    }
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    service.comments().update(
+        fileId=file_id,
+        commentId=comment_id,
+        body=comment_body,
+        **params
+    ).execute()
+
+    status = "resolved" if resolved else "unresolved"
+    return f"✅ Comment {comment_id} marked as {status}"
+
+
+@mcp.tool()
+def drive_update_permission(file_id: str, permission_id: str, role: str, drive_id: Optional[str] = None) -> str:
+    """Update an existing permission role. role: reader, writer, commenter, owner."""
+    service = get_service('drive', 'v3')
+
+    permission_body = {
+        'role': role
+    }
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    service.permissions().update(
+        fileId=file_id,
+        permissionId=permission_id,
+        body=permission_body,
+        **params
+    ).execute()
+
+    return f"✅ Permission updated to {role}"
+
+
+@mcp.tool()
+def drive_transfer_ownership(file_id: str, new_owner_email: str, drive_id: Optional[str] = None) -> str:
+    """Transfer ownership of a file to another user."""
+    service = get_service('drive', 'v3')
+
+    permission_body = {
+        'type': 'user',
+        'role': 'owner',
+        'emailAddress': new_owner_email
+    }
+
+    params = {
+        'supportsAllDrives': True,
+        'transferOwnership': True
+    } if drive_id else {'transferOwnership': True}
+
+    service.permissions().create(
+        fileId=file_id,
+        body=permission_body,
+        **params
+    ).execute()
+
+    return f"✅ Ownership transferred to {new_owner_email}"
+
+
+@mcp.tool()
+def drive_set_permission_expiration(file_id: str, permission_id: str, expiration_time: str, drive_id: Optional[str] = None) -> str:
+    """Set expiration time for a permission. Format: RFC 3339 (e.g., 2024-12-31T23:59:59Z)."""
+    service = get_service('drive', 'v3')
+
+    permission_body = {
+        'expirationTime': expiration_time
+    }
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    service.permissions().update(
+        fileId=file_id,
+        permissionId=permission_id,
+        body=permission_body,
+        **params
+    ).execute()
+
+    return f"✅ Permission will expire at {expiration_time}"
+
+
+@mcp.tool()
+def drive_add_to_folder(file_id: str, folder_id: str, drive_id: Optional[str] = None) -> str:
+    """Add a file to a folder without removing it from other folders."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True, 'addParents': folder_id} if drive_id else {'addParents': folder_id}
+
+    service.files().update(
+        fileId=file_id,
+        **params
+    ).execute()
+
+    return f"✅ File added to folder {folder_id}"
+
+
+@mcp.tool()
+def drive_remove_from_folder(file_id: str, folder_id: str, drive_id: Optional[str] = None) -> str:
+    """Remove a file from a folder (keeps file in other folders)."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True, 'removeParents': folder_id} if drive_id else {'removeParents': folder_id}
+
+    service.files().update(
+        fileId=file_id,
+        **params
+    ).execute()
+
+    return f"✅ File removed from folder {folder_id}"
+
+
+@mcp.tool()
+def drive_list_parents(file_id: str, drive_id: Optional[str] = None) -> str:
+    """List all parent folders of a file."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    file = service.files().get(
+        fileId=file_id,
+        fields='parents',
+        **params
+    ).execute()
+
+    parents = file.get('parents', [])
+
+    if not parents:
+        return f"File {file_id} has no parent folders (orphaned file)"
+
+    output = f"File is in {len(parents)} folder(s):\n\n"
+    for parent_id in parents:
+        # Get parent folder details
+        try:
+            parent = service.files().get(
+                fileId=parent_id,
+                fields='name',
+                **params
+            ).execute()
+            output += f"📁 {parent.get('name', 'Unknown')}\n   ID: {parent_id}\n\n"
+        except:
+            output += f"📁 Folder ID: {parent_id}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def drive_create_shared_drive(name: str) -> str:
+    """Create a new shared drive (Team Drive). Requires domain admin or appropriate permissions."""
+    service = get_service('drive', 'v3')
+
+    # Generate a unique request ID for idempotency
+    request_id = f"create_drive_{int(datetime.now().timestamp())}"
+
+    drive_metadata = {
+        'name': name
+    }
+
+    shared_drive = service.drives().create(
+        requestId=request_id,
+        body=drive_metadata,
+        fields='id, name'
+    ).execute()
+
+    return f"✅ Shared drive created!\nName: {shared_drive['name']}\nID: {shared_drive['id']}"
+
+
+@mcp.tool()
+def drive_update_shared_drive(drive_id: str, name: Optional[str] = None,
+                               restrict_downloads: Optional[bool] = None) -> str:
+    """Update shared drive settings. Can change name or restrictions."""
+    service = get_service('drive', 'v3')
+
+    drive_metadata = {}
+
+    if name:
+        drive_metadata['name'] = name
+
+    if restrict_downloads is not None:
+        drive_metadata['restrictions'] = {
+            'copyRequiresWriterPermission': restrict_downloads,
+            'domainUsersOnly': False
+        }
+
+    shared_drive = service.drives().update(
+        driveId=drive_id,
+        body=drive_metadata,
+        fields='id, name'
+    ).execute()
+
+    return f"✅ Shared drive updated!\nName: {shared_drive['name']}\nID: {shared_drive['id']}"
+
+
+@mcp.tool()
+def drive_delete_shared_drive(drive_id: str) -> str:
+    """Delete a shared drive. The drive must be empty first."""
+    service = get_service('drive', 'v3')
+
+    service.drives().delete(driveId=drive_id).execute()
+
+    return f"✅ Shared drive {drive_id} deleted"
+
+
+@mcp.tool()
+def drive_hide_shared_drive(drive_id: str, hidden: bool = True) -> str:
+    """Hide or unhide a shared drive from default view."""
+    service = get_service('drive', 'v3')
+
+    service.drives().hide(
+        driveId=drive_id,
+        body={'hidden': hidden}
+    ).execute()
+
+    status = "hidden" if hidden else "visible"
+    return f"✅ Shared drive is now {status}"
+
+
+@mcp.tool()
+def drive_get_revision(file_id: str, revision_id: str) -> str:
+    """Get detailed information about a specific revision."""
+    service = get_service('drive', 'v3')
+
+    revision = service.revisions().get(
+        fileId=file_id,
+        revisionId=revision_id,
+        fields='id, modifiedTime, lastModifyingUser, size, keepForever, published'
+    ).execute()
+
+    output = f"Revision {revision_id}:\n"
+    output += f"Modified: {revision.get('modifiedTime', 'N/A')}\n"
+
+    if 'lastModifyingUser' in revision:
+        user = revision['lastModifyingUser']
+        output += f"Modified by: {user.get('displayName', user.get('emailAddress', 'Unknown'))}\n"
+
+    if 'size' in revision:
+        output += f"Size: {revision['size']} bytes\n"
+
+    output += f"Keep forever: {revision.get('keepForever', False)}\n"
+    output += f"Published: {revision.get('published', False)}\n"
+
+    return output
+
+
+@mcp.tool()
+def drive_update_revision(file_id: str, revision_id: str, keep_forever: bool = True) -> str:
+    """Update revision to keep forever or allow automatic cleanup."""
+    service = get_service('drive', 'v3')
+
+    revision_body = {
+        'keepForever': keep_forever
+    }
+
+    service.revisions().update(
+        fileId=file_id,
+        revisionId=revision_id,
+        body=revision_body
+    ).execute()
+
+    status = "will be kept forever" if keep_forever else "may be automatically cleaned up"
+    return f"✅ Revision {revision_id} {status}"
+
+
+@mcp.tool()
+def drive_delete_revision(file_id: str, revision_id: str) -> str:
+    """Delete a specific revision from version history."""
+    service = get_service('drive', 'v3')
+
+    service.revisions().delete(
+        fileId=file_id,
+        revisionId=revision_id
+    ).execute()
+
+    return f"✅ Revision {revision_id} deleted"
+
+
+@mcp.tool()
+def drive_download_revision(file_id: str, revision_id: str, destination_path: str) -> str:
+    """Download a specific revision of a file."""
+    service = get_service('drive', 'v3')
+
+    request = service.revisions().get_media(
+        fileId=file_id,
+        revisionId=revision_id
+    )
+
+    with open(destination_path, 'wb') as f:
+        downloader = MediaIoBaseDownload(f, request)
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
+
+    return f"✅ Revision {revision_id} downloaded to {destination_path}"
+
+
+@mcp.tool()
+def drive_set_custom_properties(file_id: str, properties: str, drive_id: Optional[str] = None) -> str:
+    """Set custom properties (key-value metadata) on a file. properties: JSON object like '{\"key\": \"value\"}'."""
+    service = get_service('drive', 'v3')
+
+    try:
+        props = json.loads(properties)
+    except:
+        return "❌ Error: properties must be valid JSON object"
+
+    file_metadata = {
+        'properties': props
+    }
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    service.files().update(
+        fileId=file_id,
+        body=file_metadata,
+        **params
+    ).execute()
+
+    return f"✅ Custom properties set on file {file_id}"
+
+
+@mcp.tool()
+def drive_get_custom_properties(file_id: str, drive_id: Optional[str] = None) -> str:
+    """Get custom properties from a file."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    file = service.files().get(
+        fileId=file_id,
+        fields='properties',
+        **params
+    ).execute()
+
+    properties = file.get('properties', {})
+
+    if not properties:
+        return f"No custom properties found on file {file_id}"
+
+    output = f"Custom properties:\n\n"
+    for key, value in properties.items():
+        output += f"{key}: {value}\n"
+
+    return output
+
+
+@mcp.tool()
+def drive_set_app_properties(file_id: str, properties: str, drive_id: Optional[str] = None) -> str:
+    """Set app-specific properties on a file. properties: JSON object like '{\"key\": \"value\"}'."""
+    service = get_service('drive', 'v3')
+
+    try:
+        props = json.loads(properties)
+    except:
+        return "❌ Error: properties must be valid JSON object"
+
+    file_metadata = {
+        'appProperties': props
+    }
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    service.files().update(
+        fileId=file_id,
+        body=file_metadata,
+        **params
+    ).execute()
+
+    return f"✅ App properties set on file {file_id}"
+
+
+@mcp.tool()
+def drive_set_content_restrictions(file_id: str, read_only: bool = True, reason: Optional[str] = None,
+                                    drive_id: Optional[str] = None) -> str:
+    """Set content restrictions on a file (read-only mode)."""
+    service = get_service('drive', 'v3')
+
+    file_metadata = {
+        'contentRestrictions': [{
+            'readOnly': read_only,
+            'reason': reason or 'File is restricted'
+        }]
+    }
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    service.files().update(
+        fileId=file_id,
+        body=file_metadata,
+        **params
+    ).execute()
+
+    status = "read-only" if read_only else "editable"
+    return f"✅ File {file_id} is now {status}"
+
+
+@mcp.tool()
+def drive_list_changes(page_token: Optional[str] = None, drive_id: Optional[str] = None,
+                       page_size: int = 100) -> str:
+    """List recent changes in Drive. Use page_token from previous call for pagination."""
+    service = get_service('drive', 'v3')
+
+    # If no page token provided, get start page token
+    if not page_token:
+        response = service.changes().getStartPageToken(
+            supportsAllDrives=True if drive_id else False,
+            driveId=drive_id
+        ).execute()
+        page_token = response.get('startPageToken')
+
+    params = {
+        'pageToken': page_token,
+        'pageSize': page_size,
+        'fields': 'changes(file(id, name, mimeType), removed, time), newStartPageToken, nextPageToken'
+    }
+
+    if drive_id:
+        params['supportsAllDrives'] = True
+        params['driveId'] = drive_id
+
+    changes = service.changes().list(**params).execute()
+
+    change_list = changes.get('changes', [])
+
+    output = f"Found {len(change_list)} change(s):\n\n"
+    for change in change_list:
+        if change.get('removed'):
+            output += f"🗑️  Removed: {change.get('fileId', 'Unknown')}\n"
+        else:
+            file = change.get('file', {})
+            output += f"📝 {file.get('name', 'Unknown')}\n"
+            output += f"   ID: {file.get('id')}\n"
+            output += f"   Type: {file.get('mimeType', 'Unknown')}\n"
+
+        output += f"   Time: {change.get('time', 'N/A')}\n\n"
+
+    if 'nextPageToken' in changes:
+        output += f"\nNext page token: {changes['nextPageToken']}\n"
+
+    if 'newStartPageToken' in changes:
+        output += f"New start page token: {changes['newStartPageToken']}\n"
+
+    return output
+
+
+@mcp.tool()
+def drive_get_about() -> str:
+    """Get information about the user's Drive (storage quota, limits, user info)."""
+    service = get_service('drive', 'v3')
+
+    about = service.about().get(
+        fields='user, storageQuota, importFormats, exportFormats, maxImportSizes, canCreateDrives'
+    ).execute()
+
+    user = about.get('user', {})
+    quota = about.get('storageQuota', {})
+
+    output = f"Drive Account Information:\n\n"
+    output += f"User: {user.get('displayName', 'Unknown')}\n"
+    output += f"Email: {user.get('emailAddress', 'Unknown')}\n\n"
+
+    output += f"Storage:\n"
+    if 'limit' in quota:
+        limit = int(quota['limit'])
+        used = int(quota.get('usage', 0))
+        output += f"  Used: {used / (1024**3):.2f} GB\n"
+        output += f"  Total: {limit / (1024**3):.2f} GB\n"
+        output += f"  Available: {(limit - used) / (1024**3):.2f} GB\n"
+    else:
+        output += f"  Unlimited storage\n"
+
+    if 'usageInDrive' in quota:
+        output += f"  Drive usage: {int(quota['usageInDrive']) / (1024**3):.2f} GB\n"
+
+    output += f"\nCan create shared drives: {about.get('canCreateDrives', False)}\n"
+
+    return output
+
+
+@mcp.tool()
+def drive_batch_get_metadata(file_ids: str, drive_id: Optional[str] = None) -> str:
+    """Get metadata for multiple files at once. file_ids: comma-separated IDs like 'id1,id2,id3'."""
+    service = get_service('drive', 'v3')
+
+    ids = [fid.strip() for fid in file_ids.split(',')]
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    output = f"Metadata for {len(ids)} file(s):\n\n"
+
+    for file_id in ids[:20]:  # Limit to 20 files
+        try:
+            file = service.files().get(
+                fileId=file_id,
+                fields='id, name, mimeType, size, createdTime, modifiedTime',
+                **params
+            ).execute()
+
+            output += f"📄 {file.get('name', 'Unknown')}\n"
+            output += f"   ID: {file['id']}\n"
+            output += f"   Type: {file.get('mimeType', 'Unknown')}\n"
+            if 'size' in file:
+                output += f"   Size: {file['size']} bytes\n"
+            output += f"   Created: {file.get('createdTime', 'N/A')}\n\n"
+        except Exception as e:
+            output += f"❌ Error getting {file_id}: {str(e)}\n\n"
+
+    if len(ids) > 20:
+        output += f"... and {len(ids) - 20} more files (limit: 20)\n"
+
+    return output
+
+
+@mcp.tool()
+def drive_batch_delete(file_ids: str, drive_id: Optional[str] = None) -> str:
+    """Delete multiple files at once. file_ids: comma-separated IDs like 'id1,id2,id3'."""
+    service = get_service('drive', 'v3')
+
+    ids = [fid.strip() for fid in file_ids.split(',')]
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    success_count = 0
+    error_count = 0
+    errors = []
+
+    for file_id in ids:
+        try:
+            service.files().delete(fileId=file_id, **params).execute()
+            success_count += 1
+        except Exception as e:
+            error_count += 1
+            errors.append(f"{file_id}: {str(e)}")
+
+    output = f"✅ Deleted {success_count} file(s)\n"
+    if error_count > 0:
+        output += f"❌ Failed to delete {error_count} file(s):\n"
+        for error in errors[:10]:
+            output += f"  - {error}\n"
+        if len(errors) > 10:
+            output += f"  ... and {len(errors) - 10} more errors\n"
+
+    return output
+
+
 # ============================================================================
 # CALENDAR TOOLS
 # ============================================================================

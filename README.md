@@ -11,7 +11,7 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 
 ✅ **Full Shared Drive Support** - Create, read, and manage files in shared drives
 ✅ **Complete Google Workspace** - Gmail, Drive, Docs, Sheets, Slides, Forms, Chat, Calendar, Tasks
-✅ **180 Production-Ready Tools** - Comprehensive coverage of all services
+✅ **208 Production-Ready Tools** - Comprehensive coverage of all services
 ✅ **Simple Setup** - Automated installation and authentication
 ✅ **Production Ready** - Proper error handling and token refresh
 
@@ -47,7 +47,7 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Delete draft** - Remove draft
 - Full thread support
 
-### 📁 Google Drive (24 tools) - **Full Shared Drives Support!**
+### 📁 Google Drive (52 tools) - **Full Shared Drives Support!**
 - **List all shared drives** you have access to
 - **List files** in any folder (My Drive or Shared Drives)
 - **Create folders** in My Drive or Shared Drives
@@ -60,17 +60,44 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Share** files with specific users (reader, writer, commenter roles)
 - **List permissions** - See who has access to files
 - **Remove permissions** - Unshare/revoke access
+- **Update permission roles** - Change reader to writer, etc.
+- **Transfer ownership** - Transfer file ownership to another user
+- **Set permission expiration** - Time-limited access
 - **Make files public** - Share with anyone who has the link
 - **Update file description** and metadata
 - **Star/unstar files** - Mark favorites
 - **Get file metadata** with detailed information
 - **Search files** with advanced query syntax
+- **Add to folder** - Add file to folder without removing from others
+- **Remove from folder** - Remove from folder, keep in others
+- **List parent folders** - See all folders containing a file
+- **Create comments** on files
+- **List comments** on files
+- **Reply to comments**
+- **Delete comments**
+- **Resolve/unresolve comments**
 - **List trashed files** - Browse trash
 - **Restore files** from trash
 - **Empty trash** - Permanently delete all trashed files
 - **Export files** to multiple formats (PDF, DOCX, XLSX, CSV, HTML, etc.)
 - **Create shortcuts** to files/folders
 - **List file revisions** - View version history
+- **Get specific revision** details
+- **Update revision** - Keep forever or allow cleanup
+- **Delete revision** from history
+- **Download specific revision**
+- **Create shared drives** - Create new Team Drives
+- **Update shared drives** - Change name or restrictions
+- **Delete shared drives**
+- **Hide/unhide shared drives**
+- **Set custom properties** - Key-value metadata
+- **Get custom properties**
+- **Set app properties** - App-specific metadata
+- **Set content restrictions** - Read-only mode
+- **List recent changes** - Track Drive activity
+- **Get Drive info** - Storage quota, user info, limits
+- **Batch get metadata** - Multiple files at once
+- **Batch delete** - Delete multiple files at once
 - Works seamlessly with both My Drive and Team Drives
 
 ### 📝 Google Docs (38 tools)
@@ -346,7 +373,7 @@ Search my Gmail for emails from john@example.com sent this week
 Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz789
 ```
 
-## Available Tools (180 Tools Total)
+## Available Tools (208 Tools Total)
 
 ### Gmail Tools (33 tools)
 - `gmail_search(query, max_results)` - Search emails with Gmail query syntax
@@ -381,7 +408,7 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `gmail_send_draft(draft_id)` - Send a saved draft
 - `gmail_delete_draft(draft_id)` - Delete draft
 
-### Drive Tools (24 tools)
+### Drive Tools (52 tools)
 - `drive_list_shared_drives(page_size)` - List all shared drives you have access to
 - `drive_list_files(folder_id, drive_id, query, page_size)` - List files in folders
 - `drive_create_folder(name, parent_id, drive_id)` - Create folders anywhere
@@ -394,17 +421,44 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `drive_share_file(file_id, email, role, drive_id)` - Share with users
 - `drive_list_permissions(file_id, drive_id)` - List who has access to a file
 - `drive_remove_permission(file_id, permission_id, drive_id)` - Remove/revoke access
+- `drive_update_permission(file_id, permission_id, role, drive_id)` - Update permission role (reader to writer, etc.)
+- `drive_transfer_ownership(file_id, new_owner_email, drive_id)` - Transfer ownership to another user
+- `drive_set_permission_expiration(file_id, permission_id, expiration_time, drive_id)` - Set time-limited access
 - `drive_make_public(file_id, role, drive_id)` - Make file accessible to anyone with link
 - `drive_update_description(file_id, description, drive_id)` - Update file description
 - `drive_star_file(file_id, starred, drive_id)` - Star/unstar files (favorites)
 - `drive_get_file_metadata(file_id, drive_id)` - Get detailed file information
 - `drive_search_files(query, drive_id, page_size)` - Advanced file search
+- `drive_add_to_folder(file_id, folder_id, drive_id)` - Add file to folder without removing from others
+- `drive_remove_from_folder(file_id, folder_id, drive_id)` - Remove file from folder, keep in others
+- `drive_list_parents(file_id, drive_id)` - List all parent folders of a file
+- `drive_create_comment(file_id, content, drive_id)` - Create comment on file
+- `drive_list_comments(file_id, drive_id)` - List all comments on file
+- `drive_reply_to_comment(file_id, comment_id, content, drive_id)` - Reply to comment
+- `drive_delete_comment(file_id, comment_id, drive_id)` - Delete comment
+- `drive_resolve_comment(file_id, comment_id, resolved, drive_id)` - Resolve or unresolve comment
 - `drive_list_trashed_files(page_size)` - List files in trash
 - `drive_restore_file(file_id, drive_id)` - Restore file from trash
 - `drive_empty_trash()` - Permanently delete all trashed files
 - `drive_export_file(file_id, destination_path, export_format)` - Export to PDF, DOCX, XLSX, CSV, etc.
 - `drive_create_shortcut(name, target_file_id, parent_id, drive_id)` - Create shortcut to file
 - `drive_list_revisions(file_id)` - List file revision history
+- `drive_get_revision(file_id, revision_id)` - Get specific revision details
+- `drive_update_revision(file_id, revision_id, keep_forever)` - Keep revision forever or allow cleanup
+- `drive_delete_revision(file_id, revision_id)` - Delete revision from history
+- `drive_download_revision(file_id, revision_id, destination_path)` - Download specific revision
+- `drive_create_shared_drive(name)` - Create new shared drive (Team Drive)
+- `drive_update_shared_drive(drive_id, name, restrict_downloads)` - Update shared drive settings
+- `drive_delete_shared_drive(drive_id)` - Delete shared drive
+- `drive_hide_shared_drive(drive_id, hidden)` - Hide or unhide shared drive
+- `drive_set_custom_properties(file_id, properties, drive_id)` - Set custom key-value metadata
+- `drive_get_custom_properties(file_id, drive_id)` - Get custom properties
+- `drive_set_app_properties(file_id, properties, drive_id)` - Set app-specific properties
+- `drive_set_content_restrictions(file_id, read_only, reason, drive_id)` - Set read-only mode
+- `drive_list_changes(page_token, drive_id, page_size)` - List recent changes in Drive
+- `drive_get_about()` - Get Drive info (storage quota, user info, limits)
+- `drive_batch_get_metadata(file_ids, drive_id)` - Get metadata for multiple files
+- `drive_batch_delete(file_ids, drive_id)` - Delete multiple files at once
 
 ### Docs Tools (38 tools)
 - `docs_create(title, parent_id, drive_id)` - Create documents
