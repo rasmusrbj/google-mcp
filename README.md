@@ -40,7 +40,7 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Search files** with advanced query syntax
 - Works seamlessly with both My Drive and Team Drives
 
-### 📝 Google Docs (7 tools)
+### 📝 Google Docs (16 tools)
 - **Create** documents in My Drive or Shared Drives
 - **Read** full document content
 - **Append** text to existing documents
@@ -48,6 +48,15 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Replace** text (find and replace)
 - **Format** text (bold, italic, underline, font size)
 - **Insert tables** into documents
+- **Insert images** from URLs
+- **Add hyperlinks** to text
+- **Create bulleted lists**
+- **Create numbered lists**
+- **Set heading styles** (H1-H6, Title, Subtitle, Normal)
+- **Add page breaks**
+- **Delete content** from ranges
+- **Update table cells** with text
+- **Add bookmarks** for internal linking
 - Full shared drive support
 
 ### 📊 Google Sheets (8 tools)
@@ -61,13 +70,19 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Format cells** (bold, colors, etc.)
 - Formula support via USER_ENTERED mode
 
-### 🎨 Google Slides (6 tools)
+### 🎨 Google Slides (12 tools)
 - **Create** presentations in My Drive or Shared Drives
 - **Get details** about presentations (slide count, structure)
 - **Read** all text content from presentations
 - **Add slides** to presentations
 - **Add text** boxes to slides
 - **Delete** slides from presentations
+- **Insert images** from URLs
+- **Replace text** across all slides (template automation!)
+- **Format text** in slides (bold, italic, font size, color)
+- **Add shapes** (rectangles, ellipses, arrows, etc.)
+- **Duplicate slides**
+- **Add speaker notes** to slides
 - Full shared drive support
 
 ### 📋 Google Forms (5 tools)
@@ -225,7 +240,7 @@ Search my Gmail for emails from john@example.com sent this week
 Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz789
 ```
 
-## Available Tools (54 Tools Total)
+## Available Tools (69 Tools Total)
 
 ### Gmail Tools (8 tools)
 - `gmail_search(query, max_results)` - Search emails with Gmail query syntax
@@ -250,7 +265,7 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `drive_get_file_metadata(file_id, drive_id)` - Get detailed file information
 - `drive_search_files(query, drive_id, page_size)` - Advanced file search
 
-### Docs Tools (7 tools)
+### Docs Tools (16 tools)
 - `docs_create(title, parent_id, drive_id)` - Create documents
 - `docs_read(document_id)` - Read document content
 - `docs_append_text(document_id, text)` - Append text
@@ -258,6 +273,15 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `docs_replace_text(document_id, find_text, replace_text, match_case)` - Find and replace
 - `docs_format_text(document_id, start_index, end_index, bold, italic, underline, font_size)` - Format text
 - `docs_insert_table(document_id, rows, columns, index)` - Insert table
+- `docs_insert_image(document_id, image_url, index, width, height)` - Insert image from URL
+- `docs_add_hyperlink(document_id, start_index, end_index, url)` - Add hyperlink to text
+- `docs_create_bulleted_list(document_id, start_index, end_index)` - Create bulleted list
+- `docs_create_numbered_list(document_id, start_index, end_index)` - Create numbered list
+- `docs_set_heading_style(document_id, start_index, end_index, heading_level)` - Set heading style (H1-H6, TITLE, SUBTITLE, NORMAL_TEXT)
+- `docs_add_page_break(document_id, index)` - Insert page break
+- `docs_delete_content(document_id, start_index, end_index)` - Delete content from range
+- `docs_update_table_cell(document_id, table_start_index, row, column, text)` - Write to table cell
+- `docs_add_bookmark(document_id, index, bookmark_name)` - Add named bookmark
 
 ### Sheets Tools (8 tools)
 - `sheets_create(title, parent_id, drive_id)` - Create spreadsheets
@@ -269,13 +293,19 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `sheets_create_sheet_tab(spreadsheet_id, sheet_name)` - Add new sheet tab
 - `sheets_format_cells(spreadsheet_id, sheet_id, start_row, end_row, start_col, end_col, bold, background_color, text_color)` - Format cells
 
-### Slides Tools (6 tools)
+### Slides Tools (12 tools)
 - `slides_create(title, parent_id, drive_id)` - Create presentations
 - `slides_get_details(presentation_id)` - Get presentation details
 - `slides_read(presentation_id)` - Read all text content
 - `slides_add_slide(presentation_id, index)` - Add new slide
 - `slides_add_text(presentation_id, slide_id, text, x, y, width, height)` - Add text box to slide
 - `slides_delete_slide(presentation_id, slide_id)` - Delete slide
+- `slides_insert_image(presentation_id, slide_id, image_url, x, y, width, height)` - Insert image from URL
+- `slides_replace_text(presentation_id, find_text, replace_text, match_case)` - Find and replace text across all slides
+- `slides_format_text(presentation_id, slide_id, shape_id, start_index, end_index, bold, italic, font_size, foreground_color)` - Format text in shape
+- `slides_add_shape(presentation_id, slide_id, shape_type, x, y, width, height)` - Add shape (RECTANGLE, ELLIPSE, TRIANGLE, ARROW, etc.)
+- `slides_duplicate_slide(presentation_id, slide_id, index)` - Duplicate a slide
+- `slides_add_speaker_notes(presentation_id, slide_id, notes)` - Add/update speaker notes
 
 ### Forms Tools (5 tools)
 - `forms_create(title, description)` - Create new forms

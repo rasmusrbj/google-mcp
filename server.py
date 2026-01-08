@@ -689,6 +689,228 @@ def docs_insert_table(document_id: str, rows: int, columns: int, index: int) -> 
     return f"✅ Inserted {rows}x{columns} table at position {index}"
 
 
+@mcp.tool()
+def docs_insert_image(document_id: str, image_url: str, index: int, width: Optional[int] = None, height: Optional[int] = None) -> str:
+    """Insert an image from a URL at a specific position. Width/height in points (72 points = 1 inch)."""
+    service = get_service('docs', 'v1')
+
+    image_properties = {'sourceUri': image_url}
+    if width:
+        image_properties['width'] = {'magnitude': width, 'unit': 'PT'}
+    if height:
+        image_properties['height'] = {'magnitude': height, 'unit': 'PT'}
+
+    requests = [{
+        'insertInlineImage': {
+            'uri': image_url,
+            'location': {
+                'index': index
+            },
+            'objectSize': {
+                'width': {'magnitude': width or 400, 'unit': 'PT'},
+                'height': {'magnitude': height or 300, 'unit': 'PT'}
+            }
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Image inserted at position {index}"
+
+
+@mcp.tool()
+def docs_add_hyperlink(document_id: str, start_index: int, end_index: int, url: str) -> str:
+    """Add a hyperlink to text in a Google Doc."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'updateTextStyle': {
+            'range': {
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'textStyle': {
+                'link': {
+                    'url': url
+                }
+            },
+            'fields': 'link'
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Hyperlink added to text at indices {start_index}-{end_index}\nURL: {url}"
+
+
+@mcp.tool()
+def docs_create_bulleted_list(document_id: str, start_index: int, end_index: int) -> str:
+    """Convert text range into a bulleted list. Each paragraph becomes a list item."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'createParagraphBullets': {
+            'range': {
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'bulletPreset': 'BULLET_DISC_CIRCLE_SQUARE'
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Created bulleted list for text at indices {start_index}-{end_index}"
+
+
+@mcp.tool()
+def docs_create_numbered_list(document_id: str, start_index: int, end_index: int) -> str:
+    """Convert text range into a numbered list. Each paragraph becomes a list item."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'createParagraphBullets': {
+            'range': {
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'bulletPreset': 'NUMBERED_DECIMAL_ALPHA_ROMAN'
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Created numbered list for text at indices {start_index}-{end_index}"
+
+
+@mcp.tool()
+def docs_set_heading_style(document_id: str, start_index: int, end_index: int,
+                           heading_level: str = "HEADING_1") -> str:
+    """Apply heading style to text. Levels: HEADING_1, HEADING_2, HEADING_3, HEADING_4, HEADING_5, HEADING_6, NORMAL_TEXT, TITLE, SUBTITLE."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'updateParagraphStyle': {
+            'range': {
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'paragraphStyle': {
+                'namedStyleType': heading_level
+            },
+            'fields': 'namedStyleType'
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Applied {heading_level} style to text at indices {start_index}-{end_index}"
+
+
+@mcp.tool()
+def docs_add_page_break(document_id: str, index: int) -> str:
+    """Insert a page break at a specific position."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'insertPageBreak': {
+            'location': {
+                'index': index
+            }
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Page break inserted at position {index}"
+
+
+@mcp.tool()
+def docs_delete_content(document_id: str, start_index: int, end_index: int) -> str:
+    """Delete content from a specific range in a Google Doc."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'deleteContentRange': {
+            'range': {
+                'startIndex': start_index,
+                'endIndex': end_index
+            }
+        }
+    }]
+
+    service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+    return f"✅ Deleted content from indices {start_index}-{end_index}"
+
+
+@mcp.tool()
+def docs_update_table_cell(document_id: str, table_start_index: int, row: int, column: int, text: str) -> str:
+    """Write text to a specific table cell. Row and column are 0-indexed."""
+    service = get_service('docs', 'v1')
+
+    # First, we need to find the cell's location
+    # This is a simplified version - in practice you'd need to read the table structure
+    # For now, we'll use a workaround by getting the document and finding the table
+
+    doc = service.documents().get(documentId=document_id).execute()
+
+    # Find the table at the given index
+    table_location = None
+    for element in doc.get('body', {}).get('content', []):
+        if 'table' in element:
+            if element['startIndex'] == table_start_index:
+                table = element['table']
+                if row < len(table['tableRows']) and column < len(table['tableRows'][row]['tableCells']):
+                    cell = table['tableRows'][row]['tableCells'][column]
+                    cell_content = cell['content']
+                    if cell_content:
+                        # Get the first content element's start index and insert there
+                        cell_start = cell_content[0]['startIndex']
+                        cell_end = cell_content[0]['endIndex']
+
+                        # Delete existing content and insert new
+                        requests = [
+                            {
+                                'deleteContentRange': {
+                                    'range': {
+                                        'startIndex': cell_start,
+                                        'endIndex': cell_end - 1  # Don't delete the table cell end marker
+                                    }
+                                }
+                            },
+                            {
+                                'insertText': {
+                                    'location': {
+                                        'index': cell_start
+                                    },
+                                    'text': text
+                                }
+                            }
+                        ]
+
+                        service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+                        return f"✅ Updated cell (row {row}, col {column}) with text: {text}"
+
+    return f"❌ Could not find table at index {table_start_index} or cell at row {row}, column {column}"
+
+
+@mcp.tool()
+def docs_add_bookmark(document_id: str, index: int, bookmark_name: str) -> str:
+    """Add a named bookmark at a specific position for internal linking."""
+    service = get_service('docs', 'v1')
+
+    requests = [{
+        'createNamedRange': {
+            'name': bookmark_name,
+            'range': {
+                'startIndex': index,
+                'endIndex': index
+            }
+        }
+    }]
+
+    response = service.documents().batchUpdate(documentId=document_id, body={'requests': requests}).execute()
+
+    # Get the bookmark ID from response
+    bookmark_id = response['replies'][0]['createNamedRange']['namedRangeId']
+
+    return f"✅ Bookmark '{bookmark_name}' created at position {index}\nBookmark ID: {bookmark_id}"
+
+
 # ============================================================================
 # SHEETS TOOLS
 # ============================================================================
@@ -1010,6 +1232,247 @@ def slides_delete_slide(presentation_id: str, slide_id: str) -> str:
     ).execute()
 
     return f"✅ Slide deleted!\nSlide ID: {slide_id}"
+
+
+@mcp.tool()
+def slides_insert_image(presentation_id: str, slide_id: str, image_url: str,
+                        x: float = 100, y: float = 100, width: float = 400, height: float = 300) -> str:
+    """Insert an image into a slide from a URL. Coordinates in points (1 inch = 72 points)."""
+    service = get_service('slides', 'v1')
+
+    image_id = f'image_{datetime.now().timestamp()}'
+
+    requests = [{
+        'createImage': {
+            'objectId': image_id,
+            'url': image_url,
+            'elementProperties': {
+                'pageObjectId': slide_id,
+                'size': {
+                    'width': {'magnitude': width, 'unit': 'PT'},
+                    'height': {'magnitude': height, 'unit': 'PT'}
+                },
+                'transform': {
+                    'scaleX': 1,
+                    'scaleY': 1,
+                    'translateX': x,
+                    'translateY': y,
+                    'unit': 'PT'
+                }
+            }
+        }
+    }]
+
+    service.presentations().batchUpdate(
+        presentationId=presentation_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Image inserted!\nImage ID: {image_id}\nSlide: {slide_id}"
+
+
+@mcp.tool()
+def slides_replace_text(presentation_id: str, find_text: str, replace_text: str, match_case: bool = False) -> str:
+    """Find and replace text across all slides in presentation."""
+    service = get_service('slides', 'v1')
+
+    requests = [{
+        'replaceAllText': {
+            'containsText': {
+                'text': find_text,
+                'matchCase': match_case
+            },
+            'replaceText': replace_text
+        }
+    }]
+
+    response = service.presentations().batchUpdate(
+        presentationId=presentation_id,
+        body={'requests': requests}
+    ).execute()
+
+    occurrences = response.get('replies', [{}])[0].get('replaceAllText', {}).get('occurrencesChanged', 0)
+    return f"✅ Replaced {occurrences} occurrence(s) of '{find_text}' with '{replace_text}'"
+
+
+@mcp.tool()
+def slides_format_text(presentation_id: str, slide_id: str, shape_id: str,
+                       start_index: int, end_index: int, bold: Optional[bool] = None,
+                       italic: Optional[bool] = None, font_size: Optional[int] = None,
+                       foreground_color: Optional[str] = None) -> str:
+    """Format text within a text box/shape on a slide. Color in hex format like '#FF0000'."""
+    service = get_service('slides', 'v1')
+
+    requests = []
+
+    # Build text style
+    text_style = {}
+    fields = []
+
+    if bold is not None:
+        text_style['bold'] = bold
+        fields.append('bold')
+
+    if italic is not None:
+        text_style['italic'] = italic
+        fields.append('italic')
+
+    if font_size is not None:
+        text_style['fontSize'] = {'magnitude': font_size, 'unit': 'PT'}
+        fields.append('fontSize')
+
+    if foreground_color:
+        r = int(foreground_color[1:3], 16) / 255
+        g = int(foreground_color[3:5], 16) / 255
+        b = int(foreground_color[5:7], 16) / 255
+        text_style['foregroundColor'] = {
+            'opaqueColor': {
+                'rgbColor': {'red': r, 'green': g, 'blue': b}
+            }
+        }
+        fields.append('foregroundColor')
+
+    if text_style:
+        requests.append({
+            'updateTextStyle': {
+                'objectId': shape_id,
+                'textRange': {
+                    'type': 'FIXED_RANGE',
+                    'startIndex': start_index,
+                    'endIndex': end_index
+                },
+                'style': text_style,
+                'fields': ','.join(fields)
+            }
+        })
+
+    service.presentations().batchUpdate(
+        presentationId=presentation_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Formatted text in shape {shape_id} (indices {start_index}-{end_index})"
+
+
+@mcp.tool()
+def slides_add_shape(presentation_id: str, slide_id: str, shape_type: str,
+                     x: float = 100, y: float = 100, width: float = 200, height: float = 200) -> str:
+    """Add a shape to a slide. Types: RECTANGLE, ELLIPSE, TRIANGLE, ARROW, etc."""
+    service = get_service('slides', 'v1')
+
+    shape_id = f'shape_{datetime.now().timestamp()}'
+
+    requests = [{
+        'createShape': {
+            'objectId': shape_id,
+            'shapeType': shape_type,
+            'elementProperties': {
+                'pageObjectId': slide_id,
+                'size': {
+                    'width': {'magnitude': width, 'unit': 'PT'},
+                    'height': {'magnitude': height, 'unit': 'PT'}
+                },
+                'transform': {
+                    'scaleX': 1,
+                    'scaleY': 1,
+                    'translateX': x,
+                    'translateY': y,
+                    'unit': 'PT'
+                }
+            }
+        }
+    }]
+
+    service.presentations().batchUpdate(
+        presentationId=presentation_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Shape added!\nShape ID: {shape_id}\nType: {shape_type}"
+
+
+@mcp.tool()
+def slides_duplicate_slide(presentation_id: str, slide_id: str, index: Optional[int] = None) -> str:
+    """Duplicate a slide within the presentation."""
+    service = get_service('slides', 'v1')
+
+    requests = [{
+        'duplicateObject': {
+            'objectId': slide_id,
+            'objectIds': {}
+        }
+    }]
+
+    response = service.presentations().batchUpdate(
+        presentationId=presentation_id,
+        body={'requests': requests}
+    ).execute()
+
+    new_slide_id = response['replies'][0]['duplicateObject']['objectId']
+    return f"✅ Slide duplicated!\nOriginal: {slide_id}\nNew slide ID: {new_slide_id}"
+
+
+@mcp.tool()
+def slides_add_speaker_notes(presentation_id: str, slide_id: str, notes: str) -> str:
+    """Add or update speaker notes for a slide."""
+    service = get_service('slides', 'v1')
+
+    # Get the presentation to find the notes page
+    presentation = service.presentations().get(presentationId=presentation_id).execute()
+
+    # Find the slide and its notes page
+    notes_page_id = None
+    for slide in presentation.get('slides', []):
+        if slide['objectId'] == slide_id:
+            notes_page_id = slide.get('slideProperties', {}).get('notesPage', {}).get('objectId')
+            break
+
+    if not notes_page_id:
+        return f"❌ Could not find notes page for slide {slide_id}"
+
+    # Get notes page to find the notes shape
+    notes_page = service.presentations().pages().get(
+        presentationId=presentation_id,
+        pageObjectId=notes_page_id
+    ).execute()
+
+    # Find the notes shape (usually the second shape on the notes page)
+    notes_shape_id = None
+    for element in notes_page.get('pageElements', []):
+        if 'shape' in element and element['shape'].get('shapeType') == 'TEXT_BOX':
+            # Skip the first text box (slide thumbnail placeholder)
+            if notes_shape_id is None:
+                notes_shape_id = element['objectId']
+                continue
+            notes_shape_id = element['objectId']
+            break
+
+    if not notes_shape_id:
+        return f"❌ Could not find notes shape on slide {slide_id}"
+
+    # Insert text into notes
+    requests = [
+        {
+            'deleteText': {
+                'objectId': notes_shape_id,
+                'textRange': {'type': 'ALL'}
+            }
+        },
+        {
+            'insertText': {
+                'objectId': notes_shape_id,
+                'text': notes,
+                'insertionIndex': 0
+            }
+        }
+    ]
+
+    service.presentations().batchUpdate(
+        presentationId=presentation_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Speaker notes added to slide {slide_id}"
 
 
 # ============================================================================
