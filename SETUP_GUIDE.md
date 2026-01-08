@@ -319,6 +319,19 @@ If you selected "External" user type:
 
 3. Click **"CREATE"**
 
+### Step 4.3b: Add Authorized Redirect URI (Important!)
+
+After creating the OAuth client, you need to configure the redirect URI for the beautiful callback page:
+
+1. In the Credentials page, find your newly created OAuth 2.0 Client ID
+2. Click the **edit icon** (pencil) on the right side
+3. Scroll down to **"Authorized redirect URIs"**
+4. Click **"+ ADD URI"**
+5. Enter: `http://localhost:8080`
+6. Click **"SAVE"**
+
+This allows the OAuth flow to redirect back to the custom callback page with the zinc color theme.
+
 ### Step 4.4: Download Credentials
 
 A dialog will appear showing your client ID and client secret:
