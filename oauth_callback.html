@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Successful - Google Workspace MCP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #27272a 0%, #18181b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            color: #fafafa;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: #3f3f46;
+            border-radius: 24px;
+            padding: 48px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #71717a 0%, #a1a1aa 50%, #71717a 100%);
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            border-radius: 50%;
+            background: #52525b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: scaleIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .checkmark {
+            width: 40px;
+            height: 40px;
+            stroke: #a1a1aa;
+            stroke-width: 3;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            animation: drawCheck 0.8s ease-in-out 0.3s forwards;
+            stroke-dasharray: 100;
+            stroke-dashoffset: 100;
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes drawCheck {
+            to {
+                stroke-dashoffset: 0;
+            }
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #fafafa;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        p {
+            font-size: 16px;
+            color: #a1a1aa;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .details {
+            background: #27272a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 32px;
+            border: 1px solid #52525b;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #3f3f46;
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            font-size: 14px;
+            color: #a1a1aa;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            color: #fafafa;
+            font-weight: 500;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            background: #18181b;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #d4d4d8;
+            border: 1px solid #52525b;
+        }
+
+        .close-button {
+            width: 100%;
+            padding: 14px 24px;
+            background: linear-gradient(135deg, #52525b 0%, #3f3f46 100%);
+            border: 1px solid #71717a;
+            border-radius: 12px;
+            color: #fafafa;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .close-button:hover {
+            background: linear-gradient(135deg, #71717a 0%, #52525b 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .close-button:active {
+            transform: translateY(0);
+        }
+
+        .footer {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #52525b;
+            font-size: 13px;
+            color: #71717a;
+        }
+
+        .footer a {
+            color: #a1a1aa;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .footer a:hover {
+            color: #d4d4d8;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 36px 24px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            p {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">
+            <svg class="checkmark" viewBox="0 0 52 52">
+                <path d="M14 27l8 8 16-16"/>
+            </svg>
+        </div>
+
+        <h1>Authentication Successful</h1>
+        <p>Your Google Workspace account has been securely connected to the MCP server.</p>
+
+        <div class="details">
+            <div class="detail-item">
+                <span class="detail-label">Status</span>
+                <span class="status-badge">✓ Connected</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Services</span>
+                <span class="detail-value">All Enabled</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Credentials</span>
+                <span class="detail-value">Saved</span>
+            </div>
+        </div>
+
+        <button class="close-button" onclick="window.close()">
+            Close This Window
+        </button>
+
+        <div class="footer">
+            Return to your terminal to continue setup
+            <br>
+            <a href="https://github.com/rasmusrbj/google-mcp" target="_blank">View Documentation</a>
+        </div>
+    </div>
+
+    <script>
+        // Auto-close after 5 seconds if user doesn't click
+        setTimeout(() => {
+            window.close();
+        }, 5000);
+
+        // Show a subtle countdown
+        let countdown = 5;
+        const button = document.querySelector('.close-button');
+        const interval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                button.textContent = `Close This Window (${countdown}s)`;
+            } else {
+                clearInterval(interval);
+                button.textContent = 'Closing...';
+            }
+        }, 1000);
+
+        // Clear countdown on hover
+        button.addEventListener('mouseenter', () => {
+            clearInterval(interval);
+            button.textContent = 'Close This Window';
+        });
+    </script>
+</body>
+</html>

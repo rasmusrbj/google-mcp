@@ -3,10 +3,14 @@
 Authentication script for Google Workspace MCP Server
 """
 import json
+import webbrowser
 from pathlib import Path
-from google_auth_oauthlib.flow import InstalledAppFlow
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import urlparse, parse_qs
+from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
+import threading
 
 # Paths
 CLIENT_SECRET_PATH = Path.home() / "google-workspace-mcp" / "client_secret.json"
@@ -26,8 +30,63 @@ SCOPES = [
 ]
 
 
+class CallbackHandler(BaseHTTPRequestHandler):
+    """Custom HTTP handler to serve the beautiful callback page."""
+
+    def log_message(self, format, *args):
+        """Suppress default logging."""
+        pass
+
+    def do_GET(self):
+        """Handle the OAuth callback."""
+        # Parse the query parameters
+        query = urlparse(self.path).query
+        params = parse_qs(query)
+
+        # Check if this is the OAuth callback
+        if 'code' in params:
+            # Serve our beautiful HTML page
+            callback_html_path = Path(__file__).parent / "oauth_callback.html"
+
+            if callback_html_path.exists():
+                with open(callback_html_path, 'r') as f:
+                    html_content = f.read()
+            else:
+                # Fallback HTML if file not found
+                html_content = """
+                <!DOCTYPE html>
+                <html><head><title>Success</title></head>
+                <body style="background:#27272a;color:#fafafa;font-family:sans-serif;text-align:center;padding:50px;">
+                <h1>✓ Authentication Successful</h1>
+                <p>You can close this window.</p>
+                </body></html>
+                """
+
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(html_content.encode())
+
+            # Store the authorization code for the flow
+            self.server.auth_code = params['code'][0]
+        else:
+            # Redirect to error page
+            self.send_response(400)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            error_html = """
+            <!DOCTYPE html>
+            <html><head><title>Error</title></head>
+            <body style="background:#27272a;color:#fafafa;font-family:sans-serif;text-align:center;padding:50px;">
+            <h1>⚠ Authentication Failed</h1>
+            <p>No authorization code received.</p>
+            </body></html>
+            """
+            self.wfile.write(error_html.encode())
+
+
 def authenticate():
-    """Run the OAuth flow to get credentials."""
+    """Run the OAuth flow to get credentials with beautiful callback."""
     print("🔐 Google Workspace MCP Authentication")
     print("=" * 60)
 
@@ -48,16 +107,38 @@ def authenticate():
             return True
 
     print("\n🌐 Starting OAuth flow...")
-    print("A browser window will open for you to sign in with your @happenings.dk account.")
+    print("A browser window will open for you to sign in with your Google account.")
     print()
 
-    # Run OAuth flow
-    flow = InstalledAppFlow.from_client_secrets_file(
+    # Create flow
+    flow = Flow.from_client_secrets_file(
         str(CLIENT_SECRET_PATH),
-        SCOPES
+        scopes=SCOPES,
+        redirect_uri='http://localhost:8080'
     )
 
-    creds = flow.run_local_server(port=0)
+    # Start local server
+    server = HTTPServer(('localhost', 8080), CallbackHandler)
+    server.auth_code = None
+
+    # Get authorization URL
+    auth_url, _ = flow.authorization_url(prompt='consent')
+
+    print(f"🔗 Opening browser to: {auth_url[:60]}...")
+    webbrowser.open(auth_url)
+
+    print("⏳ Waiting for authorization...")
+
+    # Handle one request (the callback)
+    server.handle_request()
+
+    if not server.auth_code:
+        print("\n❌ No authorization code received!")
+        return False
+
+    # Exchange code for credentials
+    flow.fetch_token(code=server.auth_code)
+    creds = flow.credentials
 
     # Save credentials
     TOKEN_DIR.mkdir(parents=True, exist_ok=True)
