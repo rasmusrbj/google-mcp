@@ -16,14 +16,34 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 
 ## Features
 
-### 📧 Gmail (8 tools)
+### 📧 Gmail (33 tools)
 - **Search** emails with advanced Gmail queries
 - **Read** full message content with headers and body
 - **Send** emails with CC support
+- **Send with attachments** - Attach files to emails
 - **Reply** to email threads
+- **Forward** emails to other recipients
 - **Mark as read/unread**
+- **Star/unstar** emails - Mark favorites
+- **Mark as important/not important**
 - **Archive** emails
+- **Move to inbox** - Unarchive emails
 - **Delete** emails (move to trash)
+- **Untrash** - Restore from trash
+- **Permanently delete** - Delete forever
+- **Get attachments** - Download email attachments
+- **Add/remove labels** - Apply custom labels
+- **List labels** - View all system and custom labels
+- **Create custom labels**
+- **Delete custom labels**
+- **List threads** - Browse email conversations
+- **Get thread** - Read entire conversation
+- **Batch modify** - Apply changes to multiple messages
+- **Batch delete** - Delete multiple messages at once
+- **List drafts** - View all draft emails
+- **Create draft** - Save email as draft
+- **Send draft** - Send a saved draft
+- **Delete draft** - Remove draft
 - Full thread support
 
 ### 📁 Google Drive (24 tools) - **Full Shared Drives Support!**
@@ -252,17 +272,40 @@ Search my Gmail for emails from john@example.com sent this week
 Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz789
 ```
 
-## Available Tools (81 Tools Total)
+## Available Tools (106 Tools Total)
 
-### Gmail Tools (8 tools)
+### Gmail Tools (33 tools)
 - `gmail_search(query, max_results)` - Search emails with Gmail query syntax
 - `gmail_read(message_id)` - Read full email content
 - `gmail_send(to, subject, body, cc)` - Send new emails
+- `gmail_send_with_attachment(to, subject, body, attachment_path, cc)` - Send with file attachment
 - `gmail_reply(message_id, body)` - Reply to email threads
+- `gmail_forward(message_id, to, comment)` - Forward email to another recipient
 - `gmail_mark_read(message_id)` - Mark email as read
 - `gmail_mark_unread(message_id)` - Mark email as unread
+- `gmail_star(message_id)` - Star email
+- `gmail_unstar(message_id)` - Unstar email
+- `gmail_mark_important(message_id)` - Mark as important
+- `gmail_mark_not_important(message_id)` - Mark as not important
 - `gmail_archive(message_id)` - Archive email (remove from inbox)
+- `gmail_move_to_inbox(message_id)` - Move to inbox (unarchive)
 - `gmail_delete(message_id)` - Move email to trash
+- `gmail_untrash(message_id)` - Restore from trash
+- `gmail_permanently_delete(message_id)` - Delete forever
+- `gmail_get_attachment(message_id, attachment_id, destination_path)` - Download attachment
+- `gmail_add_label(message_id, label_id)` - Add label to email
+- `gmail_remove_label(message_id, label_id)` - Remove label from email
+- `gmail_list_labels()` - List all system and custom labels
+- `gmail_create_label(name)` - Create custom label
+- `gmail_delete_label(label_id)` - Delete custom label
+- `gmail_list_threads(query, max_results)` - List email threads/conversations
+- `gmail_get_thread(thread_id)` - Read entire thread with all messages
+- `gmail_batch_modify(message_ids, add_labels, remove_labels)` - Modify multiple messages
+- `gmail_batch_delete(message_ids)` - Permanently delete multiple messages
+- `gmail_list_drafts(max_results)` - List all draft emails
+- `gmail_create_draft(to, subject, body, cc)` - Create draft email
+- `gmail_send_draft(draft_id)` - Send a saved draft
+- `gmail_delete_draft(draft_id)` - Delete draft
 
 ### Drive Tools (24 tools)
 - `drive_list_shared_drives(page_size)` - List all shared drives you have access to

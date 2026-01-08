@@ -201,6 +201,401 @@ def gmail_delete(message_id: str) -> str:
     return f"✅ Moved message {message_id} to trash"
 
 
+@mcp.tool()
+def gmail_untrash(message_id: str) -> str:
+    """Restore an email from trash."""
+    service = get_service('gmail', 'v1')
+    service.users().messages().untrash(userId='me', id=message_id).execute()
+    return f"✅ Restored message {message_id} from trash"
+
+
+@mcp.tool()
+def gmail_permanently_delete(message_id: str) -> str:
+    """Permanently delete an email. WARNING: This cannot be undone!"""
+    service = get_service('gmail', 'v1')
+    service.users().messages().delete(userId='me', id=message_id).execute()
+    return f"✅ Permanently deleted message {message_id}"
+
+
+@mcp.tool()
+def gmail_move_to_inbox(message_id: str) -> str:
+    """Move an email to inbox (unarchive)."""
+    service = get_service('gmail', 'v1')
+    service.users().messages().modify(userId='me', id=message_id, body={'addLabelIds': ['INBOX']}).execute()
+    return f"✅ Moved message {message_id} to inbox"
+
+
+@mcp.tool()
+def gmail_star(message_id: str) -> str:
+    """Star an email."""
+    service = get_service('gmail', 'v1')
+    service.users().messages().modify(userId='me', id=message_id, body={'addLabelIds': ['STARRED']}).execute()
+    return f"✅ Starred message {message_id}"
+
+
+@mcp.tool()
+def gmail_unstar(message_id: str) -> str:
+    """Unstar an email."""
+    service = get_service('gmail', 'v1')
+    service.users().messages().modify(userId='me', id=message_id, body={'removeLabelIds': ['STARRED']}).execute()
+    return f"✅ Unstarred message {message_id}"
+
+
+@mcp.tool()
+def gmail_mark_important(message_id: str) -> str:
+    """Mark an email as important."""
+    service = get_service('gmail', 'v1')
+    service.users().messages().modify(userId='me', id=message_id, body={'addLabelIds': ['IMPORTANT']}).execute()
+    return f"✅ Marked message {message_id} as important"
+
+
+@mcp.tool()
+def gmail_mark_not_important(message_id: str) -> str:
+    """Mark an email as not important."""
+    service = get_service('gmail', 'v1')
+    service.users().messages().modify(userId='me', id=message_id, body={'removeLabelIds': ['IMPORTANT']}).execute()
+    return f"✅ Marked message {message_id} as not important"
+
+
+@mcp.tool()
+def gmail_add_label(message_id: str, label_id: str) -> str:
+    """Add a label to an email. Use gmail_list_labels to get label IDs."""
+    service = get_service('gmail', 'v1')
+    service.users().messages().modify(userId='me', id=message_id, body={'addLabelIds': [label_id]}).execute()
+    return f"✅ Added label {label_id} to message {message_id}"
+
+
+@mcp.tool()
+def gmail_remove_label(message_id: str, label_id: str) -> str:
+    """Remove a label from an email."""
+    service = get_service('gmail', 'v1')
+    service.users().messages().modify(userId='me', id=message_id, body={'removeLabelIds': [label_id]}).execute()
+    return f"✅ Removed label {label_id} from message {message_id}"
+
+
+@mcp.tool()
+def gmail_list_labels() -> str:
+    """List all Gmail labels (both system and custom)."""
+    service = get_service('gmail', 'v1')
+    results = service.users().labels().list(userId='me').execute()
+    labels = results.get('labels', [])
+
+    if not labels:
+        return "No labels found."
+
+    system_labels = []
+    custom_labels = []
+
+    for label in labels:
+        label_type = label.get('type', 'user')
+        if label_type == 'system':
+            system_labels.append(label)
+        else:
+            custom_labels.append(label)
+
+    output = ""
+
+    if system_labels:
+        output += "📌 System Labels:\n\n"
+        for label in system_labels:
+            output += f"  {label['name']}\n"
+            output += f"    ID: {label['id']}\n\n"
+
+    if custom_labels:
+        output += "🏷️  Custom Labels:\n\n"
+        for label in custom_labels:
+            output += f"  {label['name']}\n"
+            output += f"    ID: {label['id']}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def gmail_create_label(name: str) -> str:
+    """Create a new custom label."""
+    service = get_service('gmail', 'v1')
+
+    label_object = {
+        'name': name,
+        'messageListVisibility': 'show',
+        'labelListVisibility': 'labelShow'
+    }
+
+    created_label = service.users().labels().create(userId='me', body=label_object).execute()
+    return f"✅ Label created!\nName: {created_label['name']}\nID: {created_label['id']}"
+
+
+@mcp.tool()
+def gmail_delete_label(label_id: str) -> str:
+    """Delete a custom label."""
+    service = get_service('gmail', 'v1')
+    service.users().labels().delete(userId='me', id=label_id).execute()
+    return f"✅ Deleted label {label_id}"
+
+
+@mcp.tool()
+def gmail_send_with_attachment(to: str, subject: str, body: str, attachment_path: str, cc: Optional[str] = None) -> str:
+    """Send an email with a file attachment."""
+    service = get_service('gmail', 'v1')
+
+    # Check if attachment exists
+    att_path = Path(attachment_path)
+    if not att_path.exists():
+        return f"❌ Attachment not found: {attachment_path}"
+
+    # Create message with attachment
+    message = MIMEMultipart()
+    message['to'] = to
+    message['subject'] = subject
+    if cc:
+        message['cc'] = cc
+
+    # Add body
+    message.attach(MIMEText(body, 'plain'))
+
+    # Add attachment
+    with open(attachment_path, 'rb') as f:
+        attachment = MIMEText(f.read(), _subtype='octet-stream', _charset='utf-8')
+        attachment.add_header('Content-Disposition', 'attachment', filename=att_path.name)
+        message.attach(attachment)
+
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+    sent_message = service.users().messages().send(userId='me', body={'raw': raw}).execute()
+    return f"✅ Email sent with attachment!\nMessage ID: {sent_message['id']}\nTo: {to}\nAttachment: {att_path.name}"
+
+
+@mcp.tool()
+def gmail_get_attachment(message_id: str, attachment_id: str, destination_path: str) -> str:
+    """Download an email attachment. Use gmail_read to see attachment IDs."""
+    service = get_service('gmail', 'v1')
+
+    attachment = service.users().messages().attachments().get(
+        userId='me',
+        messageId=message_id,
+        id=attachment_id
+    ).execute()
+
+    file_data = base64.urlsafe_b64decode(attachment['data'])
+
+    dest_path = Path(destination_path)
+    with open(dest_path, 'wb') as f:
+        f.write(file_data)
+
+    return f"✅ Attachment downloaded!\nSaved to: {dest_path}\nSize: {attachment.get('size', 'unknown')} bytes"
+
+
+@mcp.tool()
+def gmail_forward(message_id: str, to: str, comment: Optional[str] = None) -> str:
+    """Forward an email to another recipient."""
+    service = get_service('gmail', 'v1')
+
+    # Get original message
+    original = service.users().messages().get(userId='me', id=message_id, format='full').execute()
+    headers = original['payload']['headers']
+
+    subject = next((h['value'] for h in headers if h['name'] == 'Subject'), 'No Subject')
+    if not subject.startswith('Fwd:'):
+        subject = f"Fwd: {subject}"
+
+    # Build forwarded message
+    forward_body = ""
+    if comment:
+        forward_body = f"{comment}\n\n---------- Forwarded message ---------\n"
+
+    # Extract original body
+    if 'parts' in original['payload']:
+        for part in original['payload']['parts']:
+            if part['mimeType'] == 'text/plain' and 'data' in part['body']:
+                forward_body += base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
+                break
+    elif 'body' in original['payload'] and 'data' in original['payload']['body']:
+        forward_body += base64.urlsafe_b64decode(original['payload']['body']['data']).decode('utf-8')
+
+    message = MIMEText(forward_body)
+    message['to'] = to
+    message['subject'] = subject
+
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+    sent = service.users().messages().send(userId='me', body={'raw': raw}).execute()
+    return f"✅ Message forwarded!\nMessage ID: {sent['id']}\nTo: {to}"
+
+
+@mcp.tool()
+def gmail_list_threads(query: Optional[str] = None, max_results: int = 10) -> str:
+    """List email threads (conversations). Optional query to filter."""
+    service = get_service('gmail', 'v1')
+
+    params = {'userId': 'me', 'maxResults': max_results}
+    if query:
+        params['q'] = query
+
+    results = service.users().threads().list(**params).execute()
+    threads = results.get('threads', [])
+
+    if not threads:
+        return "No threads found."
+
+    output = f"Found {len(threads)} thread(s):\n\n"
+    for thread in threads:
+        # Get thread details
+        thread_data = service.users().threads().get(userId='me', id=thread['id'], format='metadata').execute()
+        messages = thread_data.get('messages', [])
+
+        if messages:
+            first_msg = messages[0]
+            headers = first_msg['payload']['headers']
+            subject = next((h['value'] for h in headers if h['name'] == 'Subject'), 'No Subject')
+
+            output += f"💬 {subject}\n"
+            output += f"   Thread ID: {thread['id']}\n"
+            output += f"   Messages: {len(messages)}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def gmail_get_thread(thread_id: str) -> str:
+    """Read an entire email thread (conversation) with all messages."""
+    service = get_service('gmail', 'v1')
+
+    thread = service.users().threads().get(userId='me', id=thread_id, format='full').execute()
+    messages = thread.get('messages', [])
+
+    if not messages:
+        return f"No messages in thread {thread_id}"
+
+    output = f"Thread ID: {thread_id}\nMessages: {len(messages)}\n\n"
+    output += "="*60 + "\n\n"
+
+    for idx, msg in enumerate(messages, 1):
+        headers = msg['payload']['headers']
+        subject = next((h['value'] for h in headers if h['name'] == 'Subject'), 'No Subject')
+        from_addr = next((h['value'] for h in headers if h['name'] == 'From'), 'Unknown')
+        date = next((h['value'] for h in headers if h['name'] == 'Date'), 'Unknown')
+
+        output += f"Message {idx}/{len(messages)}:\n"
+        output += f"Subject: {subject}\n"
+        output += f"From: {from_addr}\n"
+        output += f"Date: {date}\n\n"
+
+        # Extract body
+        body = ""
+        if 'parts' in msg['payload']:
+            for part in msg['payload']['parts']:
+                if part['mimeType'] == 'text/plain' and 'data' in part['body']:
+                    body = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
+                    break
+        elif 'body' in msg['payload'] and 'data' in msg['payload']['body']:
+            body = base64.urlsafe_b64decode(msg['payload']['body']['data']).decode('utf-8')
+
+        output += f"{body}\n\n"
+        output += "-"*60 + "\n\n"
+
+    return output
+
+
+@mcp.tool()
+def gmail_batch_modify(message_ids: str, add_labels: Optional[str] = None, remove_labels: Optional[str] = None) -> str:
+    """Modify multiple messages at once. message_ids: comma-separated IDs. Labels: comma-separated label IDs."""
+    service = get_service('gmail', 'v1')
+
+    ids = [mid.strip() for mid in message_ids.split(',')]
+
+    body = {'ids': ids}
+
+    if add_labels:
+        body['addLabelIds'] = [lid.strip() for lid in add_labels.split(',')]
+
+    if remove_labels:
+        body['removeLabelIds'] = [lid.strip() for lid in remove_labels.split(',')]
+
+    service.users().messages().batchModify(userId='me', body=body).execute()
+
+    return f"✅ Modified {len(ids)} message(s)"
+
+
+@mcp.tool()
+def gmail_batch_delete(message_ids: str) -> str:
+    """Permanently delete multiple messages at once. message_ids: comma-separated IDs. WARNING: Cannot be undone!"""
+    service = get_service('gmail', 'v1')
+
+    ids = [mid.strip() for mid in message_ids.split(',')]
+
+    body = {'ids': ids}
+
+    service.users().messages().batchDelete(userId='me', body=body).execute()
+
+    return f"✅ Permanently deleted {len(ids)} message(s)"
+
+
+@mcp.tool()
+def gmail_list_drafts(max_results: int = 10) -> str:
+    """List all draft emails."""
+    service = get_service('gmail', 'v1')
+
+    results = service.users().drafts().list(userId='me', maxResults=max_results).execute()
+    drafts = results.get('drafts', [])
+
+    if not drafts:
+        return "No drafts found."
+
+    output = f"Found {len(drafts)} draft(s):\n\n"
+    for draft in drafts:
+        draft_data = service.users().drafts().get(userId='me', id=draft['id'], format='metadata').execute()
+        message = draft_data.get('message', {})
+        headers = message.get('payload', {}).get('headers', [])
+
+        subject = next((h['value'] for h in headers if h['name'] == 'Subject'), 'No Subject')
+        to = next((h['value'] for h in headers if h['name'] == 'To'), 'No recipient')
+
+        output += f"📝 {subject}\n"
+        output += f"   To: {to}\n"
+        output += f"   Draft ID: {draft['id']}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def gmail_create_draft(to: str, subject: str, body: str, cc: Optional[str] = None) -> str:
+    """Create a draft email."""
+    service = get_service('gmail', 'v1')
+
+    message = MIMEText(body)
+    message['to'] = to
+    message['subject'] = subject
+    if cc:
+        message['cc'] = cc
+
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+
+    draft = service.users().drafts().create(
+        userId='me',
+        body={'message': {'raw': raw}}
+    ).execute()
+
+    return f"✅ Draft created!\nDraft ID: {draft['id']}\nTo: {to}\nSubject: {subject}"
+
+
+@mcp.tool()
+def gmail_send_draft(draft_id: str) -> str:
+    """Send a draft email."""
+    service = get_service('gmail', 'v1')
+
+    sent = service.users().drafts().send(userId='me', body={'id': draft_id}).execute()
+
+    return f"✅ Draft sent!\nMessage ID: {sent['id']}"
+
+
+@mcp.tool()
+def gmail_delete_draft(draft_id: str) -> str:
+    """Delete a draft email."""
+    service = get_service('gmail', 'v1')
+
+    service.users().drafts().delete(userId='me', id=draft_id).execute()
+
+    return f"✅ Draft {draft_id} deleted"
+
+
 # ============================================================================
 # DRIVE TOOLS (with Shared Drive support)
 # ============================================================================
