@@ -11,7 +11,7 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 
 ✅ **Full Shared Drive Support** - Create, read, and manage files in shared drives
 ✅ **Complete Google Workspace** - Gmail, Drive, Docs, Sheets, Slides, Forms, Chat, Calendar, Tasks
-✅ **211 Production-Ready Tools** - Comprehensive coverage of all services
+✅ **213 Production-Ready Tools** - Comprehensive coverage of all services
 ✅ **Simple Setup** - Automated installation and authentication
 ✅ **Production Ready** - Proper error handling and token refresh
 
@@ -224,12 +224,13 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **List reactions** on messages
 - **Delete reactions**
 
-### 📅 Google Calendar (4 tools)
-- **List** upcoming events
-- **Create** events with attendees and location
-- **Update** existing events
-- **Delete** events
-- Full timezone support
+### 📅 Google Calendar (6 tools)
+- **List calendars** - View all available calendars
+- **List events** - Advanced filtering (time range, search query, multi-calendar)
+- **Get event** - View detailed event information
+- **Create events** - Full customization (reminders, colors, visibility, transparency, all-day events, timezones)
+- **Update events** - Modify any aspect of existing events
+- **Delete events** - Remove events from calendar
 
 ### ✅ Google Tasks (7 tools)
 - **List task lists** - View all your to-do lists
@@ -591,11 +592,13 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `chat_list_reactions(message_id)` - List reactions on message
 - `chat_delete_reaction(reaction_id)` - Delete reaction
 
-### Calendar Tools (4 tools)
-- `calendar_list_events(max_results, time_min)` - List upcoming events
-- `calendar_create_event(summary, start_time, end_time, description, location, attendees)` - Create events
-- `calendar_update_event(event_id, summary, start_time, end_time, description, location, attendees)` - Update events
-- `calendar_delete_event(event_id)` - Delete events
+### Calendar Tools (6 tools)
+- `calendar_list_calendars()` - List all available calendars
+- `calendar_list_events(calendar_id, max_results, time_min, time_max, query)` - List events with filtering
+- `calendar_get_event(event_id, calendar_id)` - Get detailed event information
+- `calendar_create_event(summary, start_time, end_time, calendar_id, description, location, attendees, timezone, color_id, visibility, transparency, reminders, use_default_reminders)` - Create events with full customization
+- `calendar_update_event(event_id, calendar_id, summary, start_time, end_time, description, location, attendees, timezone, color_id, visibility, transparency, reminders, use_default_reminders)` - Update events
+- `calendar_delete_event(event_id, calendar_id)` - Delete events
 
 ### Tasks Tools (7 tools)
 - `tasks_list_task_lists(max_results)` - List all task lists

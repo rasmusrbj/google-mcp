@@ -1823,47 +1823,175 @@ def drive_batch_delete(file_ids: str, drive_id: Optional[str] = None) -> str:
 # ============================================================================
 
 @mcp.tool()
-def calendar_list_events(max_results: int = 10, time_min: Optional[str] = None) -> str:
-    """List upcoming calendar events. time_min format: 2024-01-01T00:00:00Z"""
+def calendar_list_calendars() -> str:
+    """List all calendars available to the user.
+
+    Returns calendar IDs which can be used in other calendar functions.
+    """
+    service = get_service('calendar', 'v3')
+    calendars_result = service.calendarList().list().execute()
+    calendars = calendars_result.get('items', [])
+
+    if not calendars:
+        return "No calendars found."
+
+    output = f"Found {len(calendars)} calendar(s):\n\n"
+    for calendar in calendars:
+        primary = " [PRIMARY]" if calendar.get('primary', False) else ""
+        output += f"📅 {calendar['summary']}{primary}\n"
+        output += f"   ID: {calendar['id']}\n"
+        if calendar.get('description'):
+            output += f"   Description: {calendar['description']}\n"
+        output += f"   Access Role: {calendar.get('accessRole', 'N/A')}\n"
+        output += f"   Time Zone: {calendar.get('timeZone', 'N/A')}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def calendar_list_events(calendar_id: str = "primary", max_results: int = 10,
+                        time_min: Optional[str] = None, time_max: Optional[str] = None,
+                        query: Optional[str] = None) -> str:
+    """List calendar events with filtering.
+
+    Args:
+        calendar_id: Calendar ID (default: "primary")
+        max_results: Maximum number of events to return (default: 10)
+        time_min: Start of time range (RFC3339, e.g., "2024-01-01T00:00:00Z"). Defaults to now.
+        time_max: End of time range (RFC3339, e.g., "2024-12-31T23:59:59Z")
+        query: Text search query to filter events (searches title, description, location)
+    """
     service = get_service('calendar', 'v3')
 
     if not time_min:
         time_min = datetime.utcnow().isoformat() + 'Z'
 
-    events_result = service.events().list(
-        calendarId='primary',
-        timeMin=time_min,
-        maxResults=max_results,
-        singleEvents=True,
-        orderBy='startTime'
-    ).execute()
+    # Build query parameters
+    params = {
+        'calendarId': calendar_id,
+        'timeMin': time_min,
+        'maxResults': max_results,
+        'singleEvents': True,
+        'orderBy': 'startTime'
+    }
 
+    if time_max:
+        params['timeMax'] = time_max
+    if query:
+        params['q'] = query
+
+    events_result = service.events().list(**params).execute()
     events = events_result.get('items', [])
 
     if not events:
-        return "No upcoming events found."
+        return "No events found matching the criteria."
 
-    output = f"Found {len(events)} upcoming event(s):\n\n"
+    output = f"Found {len(events)} event(s):\n\n"
     for event in events:
         start = event['start'].get('dateTime', event['start'].get('date'))
+        end = event['end'].get('dateTime', event['end'].get('date'))
         output += f"📅 {event['summary']}\n"
         output += f"   Start: {start}\n"
+        output += f"   End: {end}\n"
+        if event.get('location'):
+            output += f"   Location: {event['location']}\n"
         output += f"   ID: {event['id']}\n\n"
     return output
 
 
 @mcp.tool()
+def calendar_get_event(event_id: str, calendar_id: str = "primary") -> str:
+    """Get details of a specific calendar event.
+
+    Args:
+        event_id: The ID of the event to retrieve
+        calendar_id: Calendar ID (default: "primary")
+    """
+    service = get_service('calendar', 'v3')
+    event = service.events().get(calendarId=calendar_id, eventId=event_id).execute()
+
+    output = f"Event Details:\n\n"
+    output += f"📅 {event['summary']}\n"
+    output += f"ID: {event['id']}\n"
+
+    # Times
+    start = event['start'].get('dateTime', event['start'].get('date'))
+    end = event['end'].get('dateTime', event['end'].get('date'))
+    output += f"Start: {start}\n"
+    output += f"End: {end}\n"
+
+    # Optional fields
+    if event.get('description'):
+        output += f"Description: {event['description']}\n"
+    if event.get('location'):
+        output += f"Location: {event['location']}\n"
+    if event.get('attendees'):
+        output += f"Attendees: {', '.join([a.get('email', 'N/A') for a in event['attendees']])}\n"
+    if event.get('creator'):
+        output += f"Creator: {event['creator'].get('email', 'N/A')}\n"
+    if event.get('organizer'):
+        output += f"Organizer: {event['organizer'].get('email', 'N/A')}\n"
+    if event.get('htmlLink'):
+        output += f"Link: {event['htmlLink']}\n"
+    if event.get('status'):
+        output += f"Status: {event['status']}\n"
+    if event.get('visibility'):
+        output += f"Visibility: {event['visibility']}\n"
+    if event.get('transparency'):
+        output += f"Transparency: {event['transparency']}\n"
+    if event.get('recurrence'):
+        output += f"Recurrence: {', '.join(event['recurrence'])}\n"
+
+    return output
+
+
+@mcp.tool()
 def calendar_create_event(summary: str, start_time: str, end_time: str,
+                          calendar_id: str = "primary",
                           description: Optional[str] = None, location: Optional[str] = None,
-                          attendees: Optional[str] = None) -> str:
-    """Create a calendar event. Times in RFC3339: 2024-01-01T10:00:00-07:00. Attendees: comma-separated emails."""
+                          attendees: Optional[str] = None, timezone: Optional[str] = None,
+                          color_id: Optional[str] = None, visibility: Optional[str] = None,
+                          transparency: Optional[str] = None,
+                          reminders: Optional[str] = None,
+                          use_default_reminders: bool = True) -> str:
+    """Create a calendar event with full customization.
+
+    Args:
+        summary: Event title
+        start_time: Start time (RFC3339: "2024-01-01T10:00:00-07:00" or "2024-01-01" for all-day)
+        end_time: End time (RFC3339: "2024-01-01T11:00:00-07:00" or "2024-01-02" for all-day)
+        calendar_id: Calendar ID (default: "primary")
+        description: Event description
+        location: Event location
+        attendees: Comma-separated attendee emails
+        timezone: Timezone (e.g., "America/New_York"). If not specified, times must include timezone in RFC3339.
+        color_id: Event color ID (1-11)
+        visibility: "default", "public", "private", or "confidential"
+        transparency: "opaque" (busy) or "transparent" (available/free)
+        reminders: JSON string or list of reminders, e.g. '[{"method": "popup", "minutes": 15}]'
+        use_default_reminders: Use calendar default reminders (default: True)
+    """
     service = get_service('calendar', 'v3')
 
-    event = {
-        'summary': summary,
-        'start': {'dateTime': start_time, 'timeZone': 'UTC'},
-        'end': {'dateTime': end_time, 'timeZone': 'UTC'},
-    }
+    # Detect all-day events (date-only format)
+    is_all_day = 'T' not in start_time
+
+    event = {'summary': summary}
+
+    if is_all_day:
+        # All-day event
+        event['start'] = {'date': start_time}
+        event['end'] = {'date': end_time}
+        if timezone:
+            event['start']['timeZone'] = timezone
+            event['end']['timeZone'] = timezone
+    else:
+        # Timed event
+        event['start'] = {'dateTime': start_time}
+        event['end'] = {'dateTime': end_time}
+        if timezone:
+            event['start']['timeZone'] = timezone
+            event['end']['timeZone'] = timezone
 
     if description:
         event['description'] = description
@@ -1871,44 +1999,129 @@ def calendar_create_event(summary: str, start_time: str, end_time: str,
         event['location'] = location
     if attendees:
         event['attendees'] = [{'email': email.strip()} for email in attendees.split(',')]
+    if color_id:
+        event['colorId'] = color_id
+    if visibility:
+        event['visibility'] = visibility
+    if transparency:
+        event['transparency'] = transparency
 
-    created = service.events().insert(calendarId='primary', body=event).execute()
-    return f"✅ Event created!\nID: {created['id']}\nLink: {created.get('htmlLink', 'N/A')}"
+    # Handle reminders
+    if not use_default_reminders:
+        reminder_overrides = []
+        if reminders:
+            import json
+            reminder_list = json.loads(reminders) if isinstance(reminders, str) else reminders
+            reminder_overrides = reminder_list
+        event['reminders'] = {
+            'useDefault': False,
+            'overrides': reminder_overrides
+        }
+
+    created = service.events().insert(calendarId=calendar_id, body=event).execute()
+    return f"✅ Event created!\nTitle: {created['summary']}\nID: {created['id']}\nLink: {created.get('htmlLink', 'N/A')}"
 
 
 @mcp.tool()
-def calendar_update_event(event_id: str, summary: Optional[str] = None, start_time: Optional[str] = None,
+def calendar_update_event(event_id: str, calendar_id: str = "primary",
+                          summary: Optional[str] = None, start_time: Optional[str] = None,
                           end_time: Optional[str] = None, description: Optional[str] = None,
-                          location: Optional[str] = None, attendees: Optional[str] = None) -> str:
-    """Update an existing calendar event. Provide only the fields you want to change."""
+                          location: Optional[str] = None, attendees: Optional[str] = None,
+                          timezone: Optional[str] = None, color_id: Optional[str] = None,
+                          visibility: Optional[str] = None, transparency: Optional[str] = None,
+                          reminders: Optional[str] = None,
+                          use_default_reminders: Optional[bool] = None) -> str:
+    """Update an existing calendar event with full customization.
+
+    Args:
+        event_id: The ID of the event to update
+        calendar_id: Calendar ID (default: "primary")
+        summary: Event title
+        start_time: Start time (RFC3339: "2024-01-01T10:00:00-07:00" or "2024-01-01" for all-day)
+        end_time: End time (RFC3339: "2024-01-01T11:00:00-07:00" or "2024-01-02" for all-day)
+        description: Event description
+        location: Event location
+        attendees: Comma-separated attendee emails
+        timezone: Timezone (e.g., "America/New_York")
+        color_id: Event color ID (1-11)
+        visibility: "default", "public", "private", or "confidential"
+        transparency: "opaque" (busy) or "transparent" (available/free)
+        reminders: JSON string or list of reminders, e.g. '[{"method": "popup", "minutes": 15}]'
+        use_default_reminders: Use calendar default reminders
+    """
     service = get_service('calendar', 'v3')
 
     # Get existing event
-    event = service.events().get(calendarId='primary', eventId=event_id).execute()
+    event = service.events().get(calendarId=calendar_id, eventId=event_id).execute()
 
     # Update only provided fields
-    if summary:
+    if summary is not None:
         event['summary'] = summary
-    if start_time:
-        event['start'] = {'dateTime': start_time, 'timeZone': 'UTC'}
-    if end_time:
-        event['end'] = {'dateTime': end_time, 'timeZone': 'UTC'}
+
+    if start_time is not None:
+        is_all_day = 'T' not in start_time
+        if is_all_day:
+            event['start'] = {'date': start_time}
+            if timezone:
+                event['start']['timeZone'] = timezone
+        else:
+            event['start'] = {'dateTime': start_time}
+            if timezone:
+                event['start']['timeZone'] = timezone
+
+    if end_time is not None:
+        is_all_day = 'T' not in end_time
+        if is_all_day:
+            event['end'] = {'date': end_time}
+            if timezone:
+                event['end']['timeZone'] = timezone
+        else:
+            event['end'] = {'dateTime': end_time}
+            if timezone:
+                event['end']['timeZone'] = timezone
+
     if description is not None:
         event['description'] = description
     if location is not None:
         event['location'] = location
-    if attendees:
+    if attendees is not None:
         event['attendees'] = [{'email': email.strip()} for email in attendees.split(',')]
+    if color_id is not None:
+        event['colorId'] = color_id
+    if visibility is not None:
+        event['visibility'] = visibility
+    if transparency is not None:
+        event['transparency'] = transparency
 
-    updated = service.events().update(calendarId='primary', eventId=event_id, body=event).execute()
-    return f"✅ Event updated!\nID: {updated['id']}\nSummary: {updated['summary']}\nLink: {updated.get('htmlLink', 'N/A')}"
+    # Handle reminders
+    if use_default_reminders is not None:
+        if not use_default_reminders:
+            reminder_overrides = []
+            if reminders:
+                import json
+                reminder_list = json.loads(reminders) if isinstance(reminders, str) else reminders
+                reminder_overrides = reminder_list
+            event['reminders'] = {
+                'useDefault': False,
+                'overrides': reminder_overrides
+            }
+        else:
+            event['reminders'] = {'useDefault': True}
+
+    updated = service.events().update(calendarId=calendar_id, eventId=event_id, body=event).execute()
+    return f"✅ Event updated!\nTitle: {updated['summary']}\nID: {updated['id']}\nLink: {updated.get('htmlLink', 'N/A')}"
 
 
 @mcp.tool()
-def calendar_delete_event(event_id: str) -> str:
-    """Delete a calendar event."""
+def calendar_delete_event(event_id: str, calendar_id: str = "primary") -> str:
+    """Delete a calendar event.
+
+    Args:
+        event_id: The ID of the event to delete
+        calendar_id: Calendar ID (default: "primary")
+    """
     service = get_service('calendar', 'v3')
-    service.events().delete(calendarId='primary', eventId=event_id).execute()
+    service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
     return f"✅ Deleted event {event_id}"
 
 
