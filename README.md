@@ -11,13 +11,13 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 
 ✅ **Full Shared Drive Support** - Create, read, and manage files in shared drives
 ✅ **Complete Google Workspace** - Gmail, Drive, Docs, Sheets, Slides, Forms, Chat, Calendar, Tasks
-✅ **215 Production-Ready Tools** - Comprehensive coverage of all services
+✅ **223 Production-Ready Tools** - Comprehensive coverage of all services
 ✅ **Simple Setup** - Automated installation and authentication
 ✅ **Production Ready** - Proper error handling and token refresh
 
 ## Features
 
-### 📧 Gmail (33 tools)
+### 📧 Gmail (41 tools) - NOW WITH FILTERS & AUTO-REPLY!
 - **Search** emails with advanced Gmail queries
 - **Read** full message content with headers and body
 - **Send** emails with CC support
@@ -43,9 +43,19 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Batch delete** - Delete multiple messages at once
 - **List drafts** - View all draft emails
 - **Create draft** - Save email as draft
+- **Get draft** - **NEW!** Read draft details
+- **Update draft** - **NEW!** Modify existing drafts
 - **Send draft** - Send a saved draft
 - **Delete draft** - Remove draft
+- **List filters** - **NEW!** View all email filters/rules
+- **Create filter** - **NEW!** Create automatic email rules (auto-label, archive, forward, etc.)
+- **Delete filter** - **NEW!** Remove filters
+- **Get vacation settings** - **NEW!** Check auto-reply status
+- **Set vacation responder** - **NEW!** Enable/disable out-of-office auto-reply
+- **Get profile** - **NEW!** Get email address and account info
 - Full thread support
+
+💡 **New automation features**: Create filters to automatically organize incoming emails, and enable vacation responder for out-of-office auto-replies!
 
 ### 📁 Google Drive (52 tools) - **Full Shared Drives Support!**
 - **List all shared drives** you have access to
@@ -381,9 +391,9 @@ Search my Gmail for emails from john@example.com sent this week
 Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz789
 ```
 
-## Available Tools (208 Tools Total)
+## Available Tools (223 Tools Total)
 
-### Gmail Tools (33 tools)
+### Gmail Tools (41 tools)
 - `gmail_search(query, max_results)` - Search emails with Gmail query syntax
 - `gmail_read(message_id)` - Read full email content
 - `gmail_send(to, subject, body, cc)` - Send new emails
@@ -413,8 +423,16 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `gmail_batch_delete(message_ids)` - Permanently delete multiple messages
 - `gmail_list_drafts(max_results)` - List all draft emails
 - `gmail_create_draft(to, subject, body, cc)` - Create draft email
+- `gmail_get_draft(draft_id)` - **NEW!** Read draft details
+- `gmail_update_draft(draft_id, to, subject, body, cc)` - **NEW!** Modify existing draft
 - `gmail_send_draft(draft_id)` - Send a saved draft
 - `gmail_delete_draft(draft_id)` - Delete draft
+- `gmail_list_filters()` - **NEW!** List all email filters/rules
+- `gmail_create_filter(criteria_from, criteria_to, criteria_subject, criteria_query, criteria_has_attachment, action_add_labels, action_remove_labels, action_forward, action_mark_read, action_archive, action_star, action_trash, action_mark_important)` - **NEW!** Create automatic email filter
+- `gmail_delete_filter(filter_id)` - **NEW!** Delete email filter
+- `gmail_get_vacation_settings()` - **NEW!** Get vacation responder status
+- `gmail_set_vacation_responder(enable, response_subject, response_body, start_date, end_date, restrict_to_contacts, restrict_to_domain)` - **NEW!** Enable/disable auto-reply
+- `gmail_get_profile()` - **NEW!** Get email address and account info
 
 ### Drive Tools (52 tools)
 - `drive_list_shared_drives(page_size)` - List all shared drives you have access to

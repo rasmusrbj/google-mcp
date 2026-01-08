@@ -580,6 +580,106 @@ def gmail_create_draft(to: str, subject: str, body: str, cc: Optional[str] = Non
 
 
 @mcp.tool()
+def gmail_get_draft(draft_id: str) -> str:
+    """Get full details of a draft email.
+
+    Args:
+        draft_id: The ID of the draft to retrieve
+    """
+    service = get_service('gmail', 'v1')
+
+    draft = service.users().drafts().get(userId='me', id=draft_id, format='full').execute()
+    message = draft.get('message', {})
+
+    # Extract headers
+    headers = message.get('payload', {}).get('headers', [])
+    subject = next((h['value'] for h in headers if h['name'] == 'Subject'), 'No Subject')
+    to = next((h['value'] for h in headers if h['name'] == 'To'), 'No recipient')
+    cc = next((h['value'] for h in headers if h['name'] == 'Cc'), None)
+
+    # Extract body
+    body = ''
+    payload = message.get('payload', {})
+    if 'parts' in payload:
+        for part in payload['parts']:
+            if part['mimeType'] == 'text/plain':
+                body = base64.urlsafe_b64decode(part['body'].get('data', '')).decode('utf-8')
+                break
+    elif 'body' in payload and 'data' in payload['body']:
+        body = base64.urlsafe_b64decode(payload['body']['data']).decode('utf-8')
+
+    output = f"Draft Details:\n\n"
+    output += f"Draft ID: {draft['id']}\n"
+    output += f"Subject: {subject}\n"
+    output += f"To: {to}\n"
+    if cc:
+        output += f"Cc: {cc}\n"
+    output += f"\nBody:\n{body}\n"
+
+    return output
+
+
+@mcp.tool()
+def gmail_update_draft(draft_id: str, to: Optional[str] = None, subject: Optional[str] = None,
+                      body: Optional[str] = None, cc: Optional[str] = None) -> str:
+    """Update an existing draft email.
+
+    Args:
+        draft_id: The ID of the draft to update
+        to: New recipient email (optional)
+        subject: New subject line (optional)
+        body: New email body (optional)
+        cc: New CC recipients (optional)
+    """
+    service = get_service('gmail', 'v1')
+
+    # Get current draft
+    current_draft = service.users().drafts().get(userId='me', id=draft_id, format='full').execute()
+    current_message = current_draft.get('message', {})
+
+    # Extract current values
+    headers = current_message.get('payload', {}).get('headers', [])
+    current_to = next((h['value'] for h in headers if h['name'] == 'To'), '')
+    current_subject = next((h['value'] for h in headers if h['name'] == 'Subject'), '')
+    current_cc = next((h['value'] for h in headers if h['name'] == 'Cc'), None)
+
+    # Extract current body
+    current_body = ''
+    payload = current_message.get('payload', {})
+    if 'parts' in payload:
+        for part in payload['parts']:
+            if part['mimeType'] == 'text/plain':
+                current_body = base64.urlsafe_b64decode(part['body'].get('data', '')).decode('utf-8')
+                break
+    elif 'body' in payload and 'data' in payload['body']:
+        current_body = base64.urlsafe_b64decode(payload['body']['data']).decode('utf-8')
+
+    # Use new values if provided, otherwise keep current
+    final_to = to if to is not None else current_to
+    final_subject = subject if subject is not None else current_subject
+    final_body = body if body is not None else current_body
+    final_cc = cc if cc is not None else current_cc
+
+    # Create updated message
+    message = MIMEText(final_body)
+    message['to'] = final_to
+    message['subject'] = final_subject
+    if final_cc:
+        message['cc'] = final_cc
+
+    raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+
+    # Update draft
+    updated_draft = service.users().drafts().update(
+        userId='me',
+        id=draft_id,
+        body={'message': {'raw': raw}}
+    ).execute()
+
+    return f"✅ Draft updated!\nDraft ID: {updated_draft['id']}\nTo: {final_to}\nSubject: {final_subject}"
+
+
+@mcp.tool()
 def gmail_send_draft(draft_id: str) -> str:
     """Send a draft email."""
     service = get_service('gmail', 'v1')
@@ -597,6 +697,265 @@ def gmail_delete_draft(draft_id: str) -> str:
     service.users().drafts().delete(userId='me', id=draft_id).execute()
 
     return f"✅ Draft {draft_id} deleted"
+
+
+@mcp.tool()
+def gmail_get_profile() -> str:
+    """Get Gmail profile information including email address and storage usage.
+
+    Returns user's primary email address, total message and thread counts,
+    and storage quota information.
+    """
+    service = get_service('gmail', 'v1')
+
+    profile = service.users().getProfile(userId='me').execute()
+
+    output = f"Gmail Profile:\n\n"
+    output += f"Email Address: {profile.get('emailAddress', 'N/A')}\n"
+    output += f"Messages Total: {profile.get('messagesTotal', 0):,}\n"
+    output += f"Threads Total: {profile.get('threadsTotal', 0):,}\n"
+    output += f"History ID: {profile.get('historyId', 'N/A')}\n"
+
+    return output
+
+
+@mcp.tool()
+def gmail_list_filters() -> str:
+    """List all Gmail filters (automatic email rules).
+
+    Filters automatically process incoming emails based on criteria like sender,
+    subject, keywords, etc.
+    """
+    service = get_service('gmail', 'v1')
+
+    filters = service.users().settings().filters().list(userId='me').execute()
+    filter_list = filters.get('filter', [])
+
+    if not filter_list:
+        return "No filters found."
+
+    output = f"Found {len(filter_list)} filter(s):\n\n"
+
+    for f in filter_list:
+        filter_id = f.get('id', 'N/A')
+        criteria = f.get('criteria', {})
+        action = f.get('action', {})
+
+        output += f"🔧 Filter ID: {filter_id}\n"
+
+        # Criteria
+        if criteria.get('from'):
+            output += f"   From: {criteria['from']}\n"
+        if criteria.get('to'):
+            output += f"   To: {criteria['to']}\n"
+        if criteria.get('subject'):
+            output += f"   Subject: {criteria['subject']}\n"
+        if criteria.get('query'):
+            output += f"   Query: {criteria['query']}\n"
+        if criteria.get('negatedQuery'):
+            output += f"   Negated Query: {criteria['negatedQuery']}\n"
+        if criteria.get('hasAttachment'):
+            output += f"   Has Attachment: {criteria['hasAttachment']}\n"
+        if criteria.get('size'):
+            output += f"   Size: {criteria['size']}\n"
+
+        # Actions
+        output += "   Actions: "
+        actions = []
+        if action.get('addLabelIds'):
+            actions.append(f"Add labels: {', '.join(action['addLabelIds'])}")
+        if action.get('removeLabelIds'):
+            actions.append(f"Remove labels: {', '.join(action['removeLabelIds'])}")
+        if action.get('forward'):
+            actions.append(f"Forward to: {action['forward']}")
+        output += ', '.join(actions) if actions else "None"
+        output += "\n\n"
+
+    return output
+
+
+@mcp.tool()
+def gmail_create_filter(criteria_from: Optional[str] = None, criteria_to: Optional[str] = None,
+                       criteria_subject: Optional[str] = None, criteria_query: Optional[str] = None,
+                       criteria_has_attachment: Optional[bool] = None,
+                       action_add_labels: Optional[str] = None, action_remove_labels: Optional[str] = None,
+                       action_forward: Optional[str] = None, action_mark_read: Optional[bool] = None,
+                       action_archive: Optional[bool] = None, action_star: Optional[bool] = None,
+                       action_trash: Optional[bool] = None, action_mark_important: Optional[bool] = None) -> str:
+    """Create a Gmail filter to automatically process incoming emails.
+
+    Criteria (at least one required):
+        criteria_from: Filter by sender email
+        criteria_to: Filter by recipient email
+        criteria_subject: Filter by subject line
+        criteria_query: Gmail search query
+        criteria_has_attachment: Filter messages with attachments
+
+    Actions (at least one required):
+        action_add_labels: Comma-separated label IDs to add
+        action_remove_labels: Comma-separated label IDs to remove
+        action_forward: Email address to forward to
+        action_mark_read: Mark as read
+        action_archive: Archive (skip inbox)
+        action_star: Add star
+        action_trash: Move to trash
+        action_mark_important: Mark as important
+
+    Example:
+        Create filter for newsletters: criteria_from="newsletter@example.com", action_add_labels="Label_123", action_archive=True
+    """
+    service = get_service('gmail', 'v1')
+
+    # Build criteria
+    criteria = {}
+    if criteria_from:
+        criteria['from'] = criteria_from
+    if criteria_to:
+        criteria['to'] = criteria_to
+    if criteria_subject:
+        criteria['subject'] = criteria_subject
+    if criteria_query:
+        criteria['query'] = criteria_query
+    if criteria_has_attachment is not None:
+        criteria['hasAttachment'] = criteria_has_attachment
+
+    if not criteria:
+        return "❌ At least one criteria must be specified"
+
+    # Build action
+    action = {}
+    if action_add_labels:
+        action['addLabelIds'] = [lid.strip() for lid in action_add_labels.split(',')]
+    if action_remove_labels:
+        action['removeLabelIds'] = [lid.strip() for lid in action_remove_labels.split(',')]
+    if action_forward:
+        action['forward'] = action_forward
+    if action_mark_read:
+        action['removeLabelIds'] = action.get('removeLabelIds', []) + ['UNREAD']
+    if action_archive:
+        action['removeLabelIds'] = action.get('removeLabelIds', []) + ['INBOX']
+    if action_star:
+        action['addLabelIds'] = action.get('addLabelIds', []) + ['STARRED']
+    if action_trash:
+        action['addLabelIds'] = action.get('addLabelIds', []) + ['TRASH']
+    if action_mark_important:
+        action['addLabelIds'] = action.get('addLabelIds', []) + ['IMPORTANT']
+
+    if not action:
+        return "❌ At least one action must be specified"
+
+    # Create filter
+    filter_body = {
+        'criteria': criteria,
+        'action': action
+    }
+
+    created = service.users().settings().filters().create(userId='me', body=filter_body).execute()
+
+    return f"✅ Filter created!\nFilter ID: {created.get('id', 'N/A')}"
+
+
+@mcp.tool()
+def gmail_delete_filter(filter_id: str) -> str:
+    """Delete a Gmail filter.
+
+    Args:
+        filter_id: The ID of the filter to delete (get from gmail_list_filters)
+    """
+    service = get_service('gmail', 'v1')
+
+    service.users().settings().filters().delete(userId='me', id=filter_id).execute()
+
+    return f"✅ Filter {filter_id} deleted"
+
+
+@mcp.tool()
+def gmail_get_vacation_settings() -> str:
+    """Get current vacation responder (auto-reply) settings.
+
+    Shows if vacation mode is enabled, the message, and the date range.
+    """
+    service = get_service('gmail', 'v1')
+
+    settings = service.users().settings().getVacation(userId='me').execute()
+
+    enabled = settings.get('enableAutoReply', False)
+
+    output = f"Vacation Responder Status: {'ENABLED' if enabled else 'DISABLED'}\n\n"
+
+    if enabled:
+        output += f"Response Subject: {settings.get('responseSubject', 'N/A')}\n"
+        output += f"Response Body:\n{settings.get('responseBodyPlainText', 'N/A')}\n\n"
+
+        if settings.get('startTime'):
+            start_ms = int(settings['startTime'])
+            start_date = datetime.fromtimestamp(start_ms / 1000).strftime('%Y-%m-%d')
+            output += f"Start Date: {start_date}\n"
+
+        if settings.get('endTime'):
+            end_ms = int(settings['endTime'])
+            end_date = datetime.fromtimestamp(end_ms / 1000).strftime('%Y-%m-%d')
+            output += f"End Date: {end_date}\n"
+
+        output += f"Restrict to Contacts: {settings.get('restrictToContacts', False)}\n"
+        output += f"Restrict to Domain: {settings.get('restrictToDomain', False)}\n"
+
+    return output
+
+
+@mcp.tool()
+def gmail_set_vacation_responder(enable: bool, response_subject: Optional[str] = None,
+                                 response_body: Optional[str] = None,
+                                 start_date: Optional[str] = None, end_date: Optional[str] = None,
+                                 restrict_to_contacts: bool = False,
+                                 restrict_to_domain: bool = False) -> str:
+    """Enable or disable vacation responder (auto-reply / out-of-office).
+
+    Args:
+        enable: True to enable vacation mode, False to disable
+        response_subject: Subject line for auto-reply (optional)
+        response_body: Body text for auto-reply (required if enabling)
+        start_date: Start date in YYYY-MM-DD format (optional, defaults to now)
+        end_date: End date in YYYY-MM-DD format (optional, no end date if omitted)
+        restrict_to_contacts: Only send to people in contacts (default: False)
+        restrict_to_domain: Only send to people in same domain (default: False)
+
+    Example:
+        Enable: enable=True, response_body="I'm out of office until Monday"
+        Disable: enable=False
+    """
+    service = get_service('gmail', 'v1')
+
+    vacation_settings = {
+        'enableAutoReply': enable
+    }
+
+    if enable:
+        if not response_body:
+            return "❌ response_body is required when enabling vacation responder"
+
+        vacation_settings['responseBodyPlainText'] = response_body
+
+        if response_subject:
+            vacation_settings['responseSubject'] = response_subject
+
+        if start_date:
+            from datetime import datetime
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            vacation_settings['startTime'] = str(int(start_dt.timestamp() * 1000))
+
+        if end_date:
+            from datetime import datetime
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            vacation_settings['endTime'] = str(int(end_dt.timestamp() * 1000))
+
+        vacation_settings['restrictToContacts'] = restrict_to_contacts
+        vacation_settings['restrictToDomain'] = restrict_to_domain
+
+    service.users().settings().updateVacation(userId='me', body=vacation_settings).execute()
+
+    status = "ENABLED" if enable else "DISABLED"
+    return f"✅ Vacation responder {status}"
 
 
 # ============================================================================
