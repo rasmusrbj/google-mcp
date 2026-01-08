@@ -11,7 +11,7 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 
 ✅ **Full Shared Drive Support** - Create, read, and manage files in shared drives
 ✅ **Complete Google Workspace** - Gmail, Drive, Docs, Sheets, Slides, Forms, Chat, Calendar, Tasks
-✅ **128 Production-Ready Tools** - Comprehensive coverage of all services
+✅ **158 Production-Ready Tools** - Comprehensive coverage of all services
 ✅ **Simple Setup** - Automated installation and authentication
 ✅ **Production Ready** - Proper error handling and token refresh
 
@@ -92,7 +92,7 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Add bookmarks** for internal linking
 - Full shared drive support
 
-### 📊 Google Sheets (8 tools)
+### 📊 Google Sheets (38 tools)
 - **Create** spreadsheets in any location
 - **Read** data from any range
 - **Write** data to specific cells/ranges
@@ -101,6 +101,32 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Get metadata** (sheet names, IDs, properties)
 - **Create sheet tabs** in existing spreadsheets
 - **Format cells** (bold, colors, etc.)
+- **Delete sheet tabs**
+- **Rename sheet tabs**
+- **Duplicate sheet tabs**
+- **Move sheet tabs** - Reorder sheet position
+- **Hide/show sheet tabs**
+- **Copy sheet to another spreadsheet**
+- **Insert rows/columns** - Add blank rows or columns
+- **Delete rows/columns** - Remove specific rows or columns
+- **Resize rows/columns** - Set custom heights and widths
+- **Auto-resize columns** - Fit columns to content
+- **Hide/show rows/columns**
+- **Merge cells** - Combine cells in various ways
+- **Unmerge cells**
+- **Add borders** - Cell borders with styles and colors
+- **Set number formats** - Currency, percent, date, time, etc.
+- **Data validation** - Dropdown lists and validation rules
+- **Copy/paste ranges** - Copy values, formats, or formulas
+- **Find and replace** - Search and replace text
+- **Sort ranges** - Sort data by columns
+- **Freeze rows/columns** - Freeze panes for scrolling
+- **Named ranges** - Create and manage named ranges
+- **Conditional formatting** - Rules with colors and conditions
+- **Add notes** - Cell comments and notes
+- **Protect ranges** - Lock cells from editing
+- **Create charts** - Column, bar, line, pie, area, scatter
+- **Create filters** - Add filter views
 - Formula support via USER_ENTERED mode
 
 ### 🎨 Google Slides (12 tools)
@@ -301,7 +327,7 @@ Search my Gmail for emails from john@example.com sent this week
 Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz789
 ```
 
-## Available Tools (128 Tools Total)
+## Available Tools (158 Tools Total)
 
 ### Gmail Tools (33 tools)
 - `gmail_search(query, max_results)` - Search emails with Gmail query syntax
@@ -379,7 +405,7 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `docs_update_table_cell(document_id, table_start_index, row, column, text)` - Write to table cell
 - `docs_add_bookmark(document_id, index, bookmark_name)` - Add named bookmark
 
-### Sheets Tools (8 tools)
+### Sheets Tools (38 tools)
 - `sheets_create(title, parent_id, drive_id)` - Create spreadsheets
 - `sheets_read(spreadsheet_id, range_name)` - Read cell data
 - `sheets_write(spreadsheet_id, range_name, values)` - Write/update cells
@@ -388,6 +414,36 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `sheets_get_metadata(spreadsheet_id)` - Get spreadsheet metadata
 - `sheets_create_sheet_tab(spreadsheet_id, sheet_name)` - Add new sheet tab
 - `sheets_format_cells(spreadsheet_id, sheet_id, start_row, end_row, start_col, end_col, bold, background_color, text_color)` - Format cells
+- `sheets_delete_sheet_tab(spreadsheet_id, sheet_id)` - Delete sheet tab
+- `sheets_rename_sheet_tab(spreadsheet_id, sheet_id, new_name)` - Rename sheet tab
+- `sheets_duplicate_sheet_tab(spreadsheet_id, sheet_id, new_sheet_name)` - Duplicate sheet tab
+- `sheets_move_sheet_tab(spreadsheet_id, sheet_id, new_index)` - Move sheet to new position
+- `sheets_hide_sheet_tab(spreadsheet_id, sheet_id, hidden)` - Hide or show sheet tab
+- `sheets_copy_to_spreadsheet(source_spreadsheet_id, sheet_id, destination_spreadsheet_id)` - Copy sheet to another spreadsheet
+- `sheets_insert_rows(spreadsheet_id, sheet_id, start_index, num_rows)` - Insert blank rows
+- `sheets_insert_columns(spreadsheet_id, sheet_id, start_index, num_columns)` - Insert blank columns
+- `sheets_delete_rows(spreadsheet_id, sheet_id, start_index, end_index)` - Delete rows
+- `sheets_delete_columns(spreadsheet_id, sheet_id, start_index, end_index)` - Delete columns
+- `sheets_resize_rows(spreadsheet_id, sheet_id, start_index, end_index, pixel_size)` - Set row height
+- `sheets_resize_columns(spreadsheet_id, sheet_id, start_index, end_index, pixel_size)` - Set column width
+- `sheets_auto_resize_columns(spreadsheet_id, sheet_id, start_index, end_index)` - Auto-resize columns to fit content
+- `sheets_hide_rows(spreadsheet_id, sheet_id, start_index, end_index, hidden)` - Hide or show rows
+- `sheets_hide_columns(spreadsheet_id, sheet_id, start_index, end_index, hidden)` - Hide or show columns
+- `sheets_merge_cells(spreadsheet_id, sheet_id, start_row, end_row, start_col, end_col, merge_type)` - Merge cells
+- `sheets_unmerge_cells(spreadsheet_id, sheet_id, start_row, end_row, start_col, end_col)` - Unmerge cells
+- `sheets_add_borders(spreadsheet_id, sheet_id, start_row, end_row, start_col, end_col, border_style, border_color)` - Add cell borders
+- `sheets_set_number_format(spreadsheet_id, sheet_id, start_row, end_row, start_col, end_col, format_type)` - Set number format (CURRENCY, PERCENT, DATE, etc.)
+- `sheets_add_data_validation(spreadsheet_id, sheet_id, start_row, end_row, start_col, end_col, values, strict)` - Add dropdown validation
+- `sheets_copy_paste(spreadsheet_id, source_sheet_id, source_start_row, source_end_row, source_start_col, source_end_col, dest_sheet_id, dest_start_row, dest_start_col, paste_type)` - Copy and paste cells
+- `sheets_find_replace(spreadsheet_id, sheet_id, find, replacement, match_case, match_entire_cell)` - Find and replace text
+- `sheets_sort_range(spreadsheet_id, sheet_id, start_row, end_row, start_col, end_col, sort_col_index, ascending)` - Sort range by column
+- `sheets_freeze_rows_columns(spreadsheet_id, sheet_id, frozen_row_count, frozen_column_count)` - Freeze rows/columns
+- `sheets_create_named_range(spreadsheet_id, range_name, sheet_id, start_row, end_row, start_col, end_col)` - Create named range
+- `sheets_add_conditional_format(spreadsheet_id, sheet_id, start_row, end_row, start_col, end_col, condition_type, condition_value, background_color)` - Add conditional formatting
+- `sheets_add_note(spreadsheet_id, sheet_id, row, col, note)` - Add note to cell
+- `sheets_protect_range(spreadsheet_id, sheet_id, start_row, end_row, start_col, end_col, description, warning_only)` - Protect range from editing
+- `sheets_create_chart(spreadsheet_id, sheet_id, chart_type, data_start_row, data_end_row, data_start_col, data_end_col, position_row, position_col)` - Create chart
+- `sheets_create_filter(spreadsheet_id, sheet_id, start_row, end_row, start_col, end_col)` - Create filter view
 
 ### Slides Tools (12 tools)
 - `slides_create(title, parent_id, drive_id)` - Create presentations

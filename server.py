@@ -1788,6 +1788,919 @@ def sheets_format_cells(spreadsheet_id: str, sheet_id: int, start_row: int, end_
     return f"✅ Formatted cells in range (rows {start_row}-{end_row}, cols {start_col}-{end_col})"
 
 
+@mcp.tool()
+def sheets_delete_sheet_tab(spreadsheet_id: str, sheet_id: int) -> str:
+    """Delete a sheet tab from a spreadsheet."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'deleteSheet': {
+            'sheetId': sheet_id
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Deleted sheet with ID {sheet_id}"
+
+
+@mcp.tool()
+def sheets_rename_sheet_tab(spreadsheet_id: str, sheet_id: int, new_name: str) -> str:
+    """Rename a sheet tab."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'updateSheetProperties': {
+            'properties': {
+                'sheetId': sheet_id,
+                'title': new_name
+            },
+            'fields': 'title'
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Renamed sheet to '{new_name}'"
+
+
+@mcp.tool()
+def sheets_duplicate_sheet_tab(spreadsheet_id: str, sheet_id: int, new_sheet_name: Optional[str] = None) -> str:
+    """Duplicate a sheet tab within the same spreadsheet."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'duplicateSheet': {
+            'sourceSheetId': sheet_id,
+            'insertSheetIndex': None,
+            'newSheetName': new_sheet_name
+        }
+    }]
+
+    response = service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    new_id = response['replies'][0]['duplicateSheet']['properties']['sheetId']
+    new_title = response['replies'][0]['duplicateSheet']['properties']['title']
+    return f"✅ Duplicated sheet!\nNew sheet: {new_title}\nNew sheet ID: {new_id}"
+
+
+@mcp.tool()
+def sheets_move_sheet_tab(spreadsheet_id: str, sheet_id: int, new_index: int) -> str:
+    """Move a sheet tab to a new position. Index starts at 0."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'updateSheetProperties': {
+            'properties': {
+                'sheetId': sheet_id,
+                'index': new_index
+            },
+            'fields': 'index'
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Moved sheet to position {new_index}"
+
+
+@mcp.tool()
+def sheets_hide_sheet_tab(spreadsheet_id: str, sheet_id: int, hidden: bool = True) -> str:
+    """Hide or show a sheet tab."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'updateSheetProperties': {
+            'properties': {
+                'sheetId': sheet_id,
+                'hidden': hidden
+            },
+            'fields': 'hidden'
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    status = "hidden" if hidden else "visible"
+    return f"✅ Sheet is now {status}"
+
+
+@mcp.tool()
+def sheets_copy_to_spreadsheet(source_spreadsheet_id: str, sheet_id: int,
+                                destination_spreadsheet_id: str) -> str:
+    """Copy a sheet to another spreadsheet."""
+    service = get_service('sheets', 'v4')
+
+    request_body = {
+        'destinationSpreadsheetId': destination_spreadsheet_id
+    }
+
+    response = service.spreadsheets().sheets().copyTo(
+        spreadsheetId=source_spreadsheet_id,
+        sheetId=sheet_id,
+        body=request_body
+    ).execute()
+
+    return f"✅ Sheet copied!\nNew sheet ID in destination: {response.get('sheetId')}\nTitle: {response.get('title')}"
+
+
+@mcp.tool()
+def sheets_insert_rows(spreadsheet_id: str, sheet_id: int, start_index: int, num_rows: int) -> str:
+    """Insert blank rows. start_index is 0-based (0 = before first row)."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'insertDimension': {
+            'range': {
+                'sheetId': sheet_id,
+                'dimension': 'ROWS',
+                'startIndex': start_index,
+                'endIndex': start_index + num_rows
+            },
+            'inheritFromBefore': False
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Inserted {num_rows} row(s) at index {start_index}"
+
+
+@mcp.tool()
+def sheets_insert_columns(spreadsheet_id: str, sheet_id: int, start_index: int, num_columns: int) -> str:
+    """Insert blank columns. start_index is 0-based (0 = before column A)."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'insertDimension': {
+            'range': {
+                'sheetId': sheet_id,
+                'dimension': 'COLUMNS',
+                'startIndex': start_index,
+                'endIndex': start_index + num_columns
+            },
+            'inheritFromBefore': False
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Inserted {num_columns} column(s) at index {start_index}"
+
+
+@mcp.tool()
+def sheets_delete_rows(spreadsheet_id: str, sheet_id: int, start_index: int, end_index: int) -> str:
+    """Delete rows. Indices are 0-based (0 = first row). Deletes rows from start_index to end_index-1."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'deleteDimension': {
+            'range': {
+                'sheetId': sheet_id,
+                'dimension': 'ROWS',
+                'startIndex': start_index,
+                'endIndex': end_index
+            }
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    num_deleted = end_index - start_index
+    return f"✅ Deleted {num_deleted} row(s) (indices {start_index}-{end_index-1})"
+
+
+@mcp.tool()
+def sheets_delete_columns(spreadsheet_id: str, sheet_id: int, start_index: int, end_index: int) -> str:
+    """Delete columns. Indices are 0-based (0 = column A). Deletes columns from start_index to end_index-1."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'deleteDimension': {
+            'range': {
+                'sheetId': sheet_id,
+                'dimension': 'COLUMNS',
+                'startIndex': start_index,
+                'endIndex': end_index
+            }
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    num_deleted = end_index - start_index
+    return f"✅ Deleted {num_deleted} column(s) (indices {start_index}-{end_index-1})"
+
+
+@mcp.tool()
+def sheets_resize_rows(spreadsheet_id: str, sheet_id: int, start_index: int, end_index: int,
+                       pixel_size: int) -> str:
+    """Set row height in pixels. Indices are 0-based."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'updateDimensionProperties': {
+            'range': {
+                'sheetId': sheet_id,
+                'dimension': 'ROWS',
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'properties': {
+                'pixelSize': pixel_size
+            },
+            'fields': 'pixelSize'
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    num_rows = end_index - start_index
+    return f"✅ Resized {num_rows} row(s) to {pixel_size}px"
+
+
+@mcp.tool()
+def sheets_resize_columns(spreadsheet_id: str, sheet_id: int, start_index: int, end_index: int,
+                          pixel_size: int) -> str:
+    """Set column width in pixels. Indices are 0-based."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'updateDimensionProperties': {
+            'range': {
+                'sheetId': sheet_id,
+                'dimension': 'COLUMNS',
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'properties': {
+                'pixelSize': pixel_size
+            },
+            'fields': 'pixelSize'
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    num_cols = end_index - start_index
+    return f"✅ Resized {num_cols} column(s) to {pixel_size}px"
+
+
+@mcp.tool()
+def sheets_auto_resize_columns(spreadsheet_id: str, sheet_id: int, start_index: int, end_index: int) -> str:
+    """Auto-resize columns to fit content. Indices are 0-based."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'autoResizeDimensions': {
+            'dimensions': {
+                'sheetId': sheet_id,
+                'dimension': 'COLUMNS',
+                'startIndex': start_index,
+                'endIndex': end_index
+            }
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    num_cols = end_index - start_index
+    return f"✅ Auto-resized {num_cols} column(s)"
+
+
+@mcp.tool()
+def sheets_hide_rows(spreadsheet_id: str, sheet_id: int, start_index: int, end_index: int,
+                     hidden: bool = True) -> str:
+    """Hide or show rows. Indices are 0-based."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'updateDimensionProperties': {
+            'range': {
+                'sheetId': sheet_id,
+                'dimension': 'ROWS',
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'properties': {
+                'hiddenByUser': hidden
+            },
+            'fields': 'hiddenByUser'
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    num_rows = end_index - start_index
+    status = "hidden" if hidden else "visible"
+    return f"✅ {num_rows} row(s) are now {status}"
+
+
+@mcp.tool()
+def sheets_hide_columns(spreadsheet_id: str, sheet_id: int, start_index: int, end_index: int,
+                        hidden: bool = True) -> str:
+    """Hide or show columns. Indices are 0-based."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'updateDimensionProperties': {
+            'range': {
+                'sheetId': sheet_id,
+                'dimension': 'COLUMNS',
+                'startIndex': start_index,
+                'endIndex': end_index
+            },
+            'properties': {
+                'hiddenByUser': hidden
+            },
+            'fields': 'hiddenByUser'
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    num_cols = end_index - start_index
+    status = "hidden" if hidden else "visible"
+    return f"✅ {num_cols} column(s) are now {status}"
+
+
+@mcp.tool()
+def sheets_merge_cells(spreadsheet_id: str, sheet_id: int, start_row: int, end_row: int,
+                       start_col: int, end_col: int, merge_type: str = "MERGE_ALL") -> str:
+    """Merge cells. merge_type: MERGE_ALL, MERGE_COLUMNS, or MERGE_ROWS. Indices are 0-based."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'mergeCells': {
+            'range': {
+                'sheetId': sheet_id,
+                'startRowIndex': start_row,
+                'endRowIndex': end_row,
+                'startColumnIndex': start_col,
+                'endColumnIndex': end_col
+            },
+            'mergeType': merge_type
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Merged cells (rows {start_row}-{end_row-1}, cols {start_col}-{end_col-1})"
+
+
+@mcp.tool()
+def sheets_unmerge_cells(spreadsheet_id: str, sheet_id: int, start_row: int, end_row: int,
+                         start_col: int, end_col: int) -> str:
+    """Unmerge cells in a range. Indices are 0-based."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'unmergeCells': {
+            'range': {
+                'sheetId': sheet_id,
+                'startRowIndex': start_row,
+                'endRowIndex': end_row,
+                'startColumnIndex': start_col,
+                'endColumnIndex': end_col
+            }
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Unmerged cells in range"
+
+
+@mcp.tool()
+def sheets_add_borders(spreadsheet_id: str, sheet_id: int, start_row: int, end_row: int,
+                       start_col: int, end_col: int, border_style: str = "SOLID",
+                       border_color: str = "#000000") -> str:
+    """Add borders to cells. border_style: SOLID, DOTTED, DASHED. Color in hex. Indices 0-based."""
+    service = get_service('sheets', 'v4')
+
+    # Convert hex to RGB
+    r = int(border_color[1:3], 16) / 255
+    g = int(border_color[3:5], 16) / 255
+    b = int(border_color[5:7], 16) / 255
+
+    border = {
+        'style': border_style,
+        'color': {'red': r, 'green': g, 'blue': b}
+    }
+
+    requests = [{
+        'updateBorders': {
+            'range': {
+                'sheetId': sheet_id,
+                'startRowIndex': start_row,
+                'endRowIndex': end_row,
+                'startColumnIndex': start_col,
+                'endColumnIndex': end_col
+            },
+            'top': border,
+            'bottom': border,
+            'left': border,
+            'right': border,
+            'innerHorizontal': border,
+            'innerVertical': border
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Added borders to range"
+
+
+@mcp.tool()
+def sheets_set_number_format(spreadsheet_id: str, sheet_id: int, start_row: int, end_row: int,
+                              start_col: int, end_col: int, format_type: str) -> str:
+    """Set number format. Types: NUMBER, CURRENCY, PERCENT, DATE, TIME, DATE_TIME, SCIENTIFIC, TEXT. Indices 0-based."""
+    service = get_service('sheets', 'v4')
+
+    # Format patterns
+    patterns = {
+        'NUMBER': '0.00',
+        'CURRENCY': '$#,##0.00',
+        'PERCENT': '0.00%',
+        'DATE': 'yyyy-mm-dd',
+        'TIME': 'h:mm:ss am/pm',
+        'DATE_TIME': 'yyyy-mm-dd h:mm:ss',
+        'SCIENTIFIC': '0.00E+00',
+        'TEXT': '@'
+    }
+
+    pattern = patterns.get(format_type, '0.00')
+
+    requests = [{
+        'repeatCell': {
+            'range': {
+                'sheetId': sheet_id,
+                'startRowIndex': start_row,
+                'endRowIndex': end_row,
+                'startColumnIndex': start_col,
+                'endColumnIndex': end_col
+            },
+            'cell': {
+                'userEnteredFormat': {
+                    'numberFormat': {
+                        'type': format_type if format_type != 'CURRENCY' else 'NUMBER',
+                        'pattern': pattern
+                    }
+                }
+            },
+            'fields': 'userEnteredFormat.numberFormat'
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Applied {format_type} format to range"
+
+
+@mcp.tool()
+def sheets_add_data_validation(spreadsheet_id: str, sheet_id: int, start_row: int, end_row: int,
+                                start_col: int, end_col: int, values: str, strict: bool = True) -> str:
+    """Add dropdown data validation. values: JSON array like '["Option1", "Option2"]'. Indices 0-based."""
+    service = get_service('sheets', 'v4')
+
+    try:
+        value_list = json.loads(values)
+    except:
+        return "❌ Error: values must be valid JSON array"
+
+    condition_values = [{'userEnteredValue': v} for v in value_list]
+
+    requests = [{
+        'setDataValidation': {
+            'range': {
+                'sheetId': sheet_id,
+                'startRowIndex': start_row,
+                'endRowIndex': end_row,
+                'startColumnIndex': start_col,
+                'endColumnIndex': end_col
+            },
+            'rule': {
+                'condition': {
+                    'type': 'ONE_OF_LIST',
+                    'values': condition_values
+                },
+                'showCustomUi': True,
+                'strict': strict
+            }
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Added dropdown validation with {len(value_list)} options"
+
+
+@mcp.tool()
+def sheets_copy_paste(spreadsheet_id: str, source_sheet_id: int, source_start_row: int,
+                      source_end_row: int, source_start_col: int, source_end_col: int,
+                      dest_sheet_id: int, dest_start_row: int, dest_start_col: int,
+                      paste_type: str = "NORMAL") -> str:
+    """Copy and paste cells. paste_type: NORMAL, VALUES, FORMAT, FORMULA. All indices 0-based."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'copyPaste': {
+            'source': {
+                'sheetId': source_sheet_id,
+                'startRowIndex': source_start_row,
+                'endRowIndex': source_end_row,
+                'startColumnIndex': source_start_col,
+                'endColumnIndex': source_end_col
+            },
+            'destination': {
+                'sheetId': dest_sheet_id,
+                'startRowIndex': dest_start_row,
+                'endRowIndex': dest_start_row + (source_end_row - source_start_row),
+                'startColumnIndex': dest_start_col,
+                'endColumnIndex': dest_start_col + (source_end_col - source_start_col)
+            },
+            'pasteType': f'PASTE_{paste_type}'
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Copied and pasted range ({paste_type})"
+
+
+@mcp.tool()
+def sheets_find_replace(spreadsheet_id: str, sheet_id: int, find: str, replacement: str,
+                        match_case: bool = False, match_entire_cell: bool = False) -> str:
+    """Find and replace text in a sheet."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'findReplace': {
+            'find': find,
+            'replacement': replacement,
+            'matchCase': match_case,
+            'matchEntireCell': match_entire_cell,
+            'sheetId': sheet_id
+        }
+    }]
+
+    response = service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    occurrences = response['replies'][0]['findReplace'].get('occurrencesChanged', 0)
+    return f"✅ Replaced {occurrences} occurrence(s) of '{find}' with '{replacement}'"
+
+
+@mcp.tool()
+def sheets_sort_range(spreadsheet_id: str, sheet_id: int, start_row: int, end_row: int,
+                      start_col: int, end_col: int, sort_col_index: int, ascending: bool = True) -> str:
+    """Sort a range by a column. sort_col_index is 0-based within the range."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'sortRange': {
+            'range': {
+                'sheetId': sheet_id,
+                'startRowIndex': start_row,
+                'endRowIndex': end_row,
+                'startColumnIndex': start_col,
+                'endColumnIndex': end_col
+            },
+            'sortSpecs': [{
+                'dimensionIndex': start_col + sort_col_index,
+                'sortOrder': 'ASCENDING' if ascending else 'DESCENDING'
+            }]
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    direction = "ascending" if ascending else "descending"
+    return f"✅ Sorted range by column {start_col + sort_col_index} ({direction})"
+
+
+@mcp.tool()
+def sheets_freeze_rows_columns(spreadsheet_id: str, sheet_id: int, frozen_row_count: int = 0,
+                                frozen_column_count: int = 0) -> str:
+    """Freeze rows and/or columns. Set counts to 0 to unfreeze."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'updateSheetProperties': {
+            'properties': {
+                'sheetId': sheet_id,
+                'gridProperties': {
+                    'frozenRowCount': frozen_row_count,
+                    'frozenColumnCount': frozen_column_count
+                }
+            },
+            'fields': 'gridProperties.frozenRowCount,gridProperties.frozenColumnCount'
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Froze {frozen_row_count} row(s) and {frozen_column_count} column(s)"
+
+
+@mcp.tool()
+def sheets_create_named_range(spreadsheet_id: str, range_name: str, sheet_id: int,
+                               start_row: int, end_row: int, start_col: int, end_col: int) -> str:
+    """Create a named range. Indices are 0-based."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'addNamedRange': {
+            'namedRange': {
+                'name': range_name,
+                'range': {
+                    'sheetId': sheet_id,
+                    'startRowIndex': start_row,
+                    'endRowIndex': end_row,
+                    'startColumnIndex': start_col,
+                    'endColumnIndex': end_col
+                }
+            }
+        }
+    }]
+
+    response = service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Created named range '{range_name}'"
+
+
+@mcp.tool()
+def sheets_add_conditional_format(spreadsheet_id: str, sheet_id: int, start_row: int, end_row: int,
+                                   start_col: int, end_col: int, condition_type: str,
+                                   condition_value: str, background_color: str = "#00FF00") -> str:
+    """Add conditional formatting. condition_type: NUMBER_GREATER, NUMBER_LESS, TEXT_CONTAINS, etc. Indices 0-based."""
+    service = get_service('sheets', 'v4')
+
+    # Convert hex to RGB
+    r = int(background_color[1:3], 16) / 255
+    g = int(background_color[3:5], 16) / 255
+    b = int(background_color[5:7], 16) / 255
+
+    condition_values = [{'userEnteredValue': condition_value}]
+
+    requests = [{
+        'addConditionalFormatRule': {
+            'rule': {
+                'ranges': [{
+                    'sheetId': sheet_id,
+                    'startRowIndex': start_row,
+                    'endRowIndex': end_row,
+                    'startColumnIndex': start_col,
+                    'endColumnIndex': end_col
+                }],
+                'booleanRule': {
+                    'condition': {
+                        'type': condition_type,
+                        'values': condition_values
+                    },
+                    'format': {
+                        'backgroundColor': {'red': r, 'green': g, 'blue': b}
+                    }
+                }
+            },
+            'index': 0
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Added conditional formatting rule ({condition_type})"
+
+
+@mcp.tool()
+def sheets_add_note(spreadsheet_id: str, sheet_id: int, row: int, col: int, note: str) -> str:
+    """Add a note to a cell. Row and column are 0-based."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'updateCells': {
+            'range': {
+                'sheetId': sheet_id,
+                'startRowIndex': row,
+                'endRowIndex': row + 1,
+                'startColumnIndex': col,
+                'endColumnIndex': col + 1
+            },
+            'rows': [{
+                'values': [{
+                    'note': note
+                }]
+            }],
+            'fields': 'note'
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Added note to cell (row {row}, col {col})"
+
+
+@mcp.tool()
+def sheets_protect_range(spreadsheet_id: str, sheet_id: int, start_row: int, end_row: int,
+                         start_col: int, end_col: int, description: str = "Protected Range",
+                         warning_only: bool = False) -> str:
+    """Protect a range from editing. warning_only=True shows warning instead of blocking. Indices 0-based."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'addProtectedRange': {
+            'protectedRange': {
+                'range': {
+                    'sheetId': sheet_id,
+                    'startRowIndex': start_row,
+                    'endRowIndex': end_row,
+                    'startColumnIndex': start_col,
+                    'endColumnIndex': end_col
+                },
+                'description': description,
+                'warningOnly': warning_only
+            }
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    protection_type = "warning" if warning_only else "protected"
+    return f"✅ Range is now {protection_type}: {description}"
+
+
+@mcp.tool()
+def sheets_create_chart(spreadsheet_id: str, sheet_id: int, chart_type: str,
+                        data_start_row: int, data_end_row: int, data_start_col: int, data_end_col: int,
+                        position_row: int = 0, position_col: int = 0) -> str:
+    """Create a chart. chart_type: COLUMN, BAR, LINE, PIE, AREA, SCATTER. All indices 0-based."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'addChart': {
+            'chart': {
+                'spec': {
+                    'title': 'Chart',
+                    'basicChart': {
+                        'chartType': chart_type,
+                        'legendPosition': 'RIGHT_LEGEND',
+                        'domains': [{
+                            'domain': {
+                                'sourceRange': {
+                                    'sources': [{
+                                        'sheetId': sheet_id,
+                                        'startRowIndex': data_start_row,
+                                        'endRowIndex': data_end_row,
+                                        'startColumnIndex': data_start_col,
+                                        'endColumnIndex': data_start_col + 1
+                                    }]
+                                }
+                            }
+                        }],
+                        'series': [{
+                            'series': {
+                                'sourceRange': {
+                                    'sources': [{
+                                        'sheetId': sheet_id,
+                                        'startRowIndex': data_start_row,
+                                        'endRowIndex': data_end_row,
+                                        'startColumnIndex': data_start_col + 1,
+                                        'endColumnIndex': data_end_col
+                                    }]
+                                }
+                            }
+                        }]
+                    }
+                },
+                'position': {
+                    'overlayPosition': {
+                        'anchorCell': {
+                            'sheetId': sheet_id,
+                            'rowIndex': position_row,
+                            'columnIndex': position_col
+                        }
+                    }
+                }
+            }
+        }
+    }]
+
+    response = service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Created {chart_type} chart"
+
+
+@mcp.tool()
+def sheets_create_filter(spreadsheet_id: str, sheet_id: int, start_row: int, end_row: int,
+                         start_col: int, end_col: int) -> str:
+    """Create a filter view on a range. Indices are 0-based."""
+    service = get_service('sheets', 'v4')
+
+    requests = [{
+        'setBasicFilter': {
+            'filter': {
+                'range': {
+                    'sheetId': sheet_id,
+                    'startRowIndex': start_row,
+                    'endRowIndex': end_row,
+                    'startColumnIndex': start_col,
+                    'endColumnIndex': end_col
+                }
+            }
+        }
+    }]
+
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=spreadsheet_id,
+        body={'requests': requests}
+    ).execute()
+
+    return f"✅ Created filter on range"
+
+
 # ============================================================================
 # SLIDES TOOLS
 # ============================================================================
