@@ -466,6 +466,315 @@ def drive_search_files(query: str, drive_id: Optional[str] = None, page_size: in
     return output
 
 
+@mcp.tool()
+def drive_rename_file(file_id: str, new_name: str, drive_id: Optional[str] = None) -> str:
+    """Rename a file or folder."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    file = service.files().update(
+        fileId=file_id,
+        body={'name': new_name},
+        fields='id, name',
+        **params
+    ).execute()
+
+    return f"✅ Renamed file!\nNew name: {file['name']}\nID: {file['id']}"
+
+
+@mcp.tool()
+def drive_list_permissions(file_id: str, drive_id: Optional[str] = None) -> str:
+    """List all permissions (who has access) for a file."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    permissions = service.permissions().list(
+        fileId=file_id,
+        fields='permissions(id, type, role, emailAddress, domain, displayName)',
+        **params
+    ).execute()
+
+    perms = permissions.get('permissions', [])
+
+    if not perms:
+        return "No permissions found (file is private)."
+
+    output = f"Permissions for file {file_id}:\n\n"
+    for perm in perms:
+        perm_type = perm.get('type', 'unknown')
+        role = perm.get('role', 'unknown')
+
+        if perm_type == 'user':
+            output += f"👤 {perm.get('displayName', perm.get('emailAddress', 'Unknown'))}\n"
+            output += f"   Email: {perm.get('emailAddress', 'N/A')}\n"
+        elif perm_type == 'group':
+            output += f"👥 {perm.get('displayName', perm.get('emailAddress', 'Unknown'))}\n"
+            output += f"   Email: {perm.get('emailAddress', 'N/A')}\n"
+        elif perm_type == 'domain':
+            output += f"🏢 Domain: {perm.get('domain', 'Unknown')}\n"
+        elif perm_type == 'anyone':
+            output += f"🌐 Anyone with the link\n"
+
+        output += f"   Role: {role}\n"
+        output += f"   Permission ID: {perm['id']}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def drive_remove_permission(file_id: str, permission_id: str, drive_id: Optional[str] = None) -> str:
+    """Remove a permission (unshare) from a file. Use drive_list_permissions to get permission IDs."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    service.permissions().delete(
+        fileId=file_id,
+        permissionId=permission_id,
+        **params
+    ).execute()
+
+    return f"✅ Removed permission {permission_id} from file {file_id}"
+
+
+@mcp.tool()
+def drive_make_public(file_id: str, role: str = "reader", drive_id: Optional[str] = None) -> str:
+    """Make a file publicly accessible to anyone with the link. Roles: reader, writer, commenter."""
+    service = get_service('drive', 'v3')
+
+    permission = {
+        'type': 'anyone',
+        'role': role
+    }
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    service.permissions().create(
+        fileId=file_id,
+        body=permission,
+        **params
+    ).execute()
+
+    return f"✅ File {file_id} is now public (anyone with link can {role})"
+
+
+@mcp.tool()
+def drive_update_description(file_id: str, description: str, drive_id: Optional[str] = None) -> str:
+    """Update a file's description."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    file = service.files().update(
+        fileId=file_id,
+        body={'description': description},
+        fields='id, name, description',
+        **params
+    ).execute()
+
+    return f"✅ Updated description for {file['name']}\nDescription: {file.get('description', 'None')}"
+
+
+@mcp.tool()
+def drive_star_file(file_id: str, starred: bool = True, drive_id: Optional[str] = None) -> str:
+    """Star or unstar a file (add to favorites)."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    service.files().update(
+        fileId=file_id,
+        body={'starred': starred},
+        **params
+    ).execute()
+
+    status = "starred" if starred else "unstarred"
+    return f"✅ File {file_id} {status}"
+
+
+@mcp.tool()
+def drive_list_trashed_files(page_size: int = 20) -> str:
+    """List files in the trash."""
+    service = get_service('drive', 'v3')
+
+    results = service.files().list(
+        q="trashed=true",
+        pageSize=page_size,
+        fields='files(id, name, mimeType, trashedTime, webViewLink)',
+        orderBy='trashedTime desc'
+    ).execute()
+
+    files = results.get('files', [])
+
+    if not files:
+        return "Trash is empty."
+
+    output = f"Found {len(files)} file(s) in trash:\n\n"
+    for file in files:
+        icon = "📁" if file['mimeType'] == 'application/vnd.google-apps.folder' else "📄"
+        output += f"{icon} {file['name']}\n"
+        output += f"   ID: {file['id']}\n"
+        output += f"   Trashed: {file.get('trashedTime', 'N/A')}\n"
+        output += f"   Link: {file.get('webViewLink', 'N/A')}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def drive_restore_file(file_id: str, drive_id: Optional[str] = None) -> str:
+    """Restore a file from trash."""
+    service = get_service('drive', 'v3')
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    file = service.files().update(
+        fileId=file_id,
+        body={'trashed': False},
+        fields='id, name',
+        **params
+    ).execute()
+
+    return f"✅ Restored file from trash!\nName: {file['name']}\nID: {file['id']}"
+
+
+@mcp.tool()
+def drive_empty_trash() -> str:
+    """Permanently delete all files in trash. WARNING: This cannot be undone!"""
+    service = get_service('drive', 'v3')
+
+    service.files().emptyTrash().execute()
+
+    return f"✅ Trash emptied! All trashed files permanently deleted."
+
+
+@mcp.tool()
+def drive_export_file(file_id: str, destination_path: str, export_format: str = "pdf") -> str:
+    """Export a Google Workspace file to a specific format.
+    Formats: pdf, docx, xlsx, pptx, txt, csv, html, zip, epub, rtf, odt, ods, odp.
+    Auto-detects file type (Docs, Sheets, Slides) and uses appropriate export format."""
+    service = get_service('drive', 'v3')
+
+    # Get file metadata to determine type
+    file_metadata = service.files().get(fileId=file_id, fields='name, mimeType').execute()
+    mime_type = file_metadata['mimeType']
+    file_name = file_metadata['name']
+
+    # Map export formats to MIME types for each Google Workspace file type
+    export_mappings = {
+        'application/vnd.google-apps.document': {
+            'pdf': 'application/pdf',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'txt': 'text/plain',
+            'html': 'text/html',
+            'zip': 'application/zip',
+            'epub': 'application/epub+zip',
+            'rtf': 'application/rtf',
+            'odt': 'application/vnd.oasis.opendocument.text'
+        },
+        'application/vnd.google-apps.spreadsheet': {
+            'pdf': 'application/pdf',
+            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'csv': 'text/csv',
+            'zip': 'application/zip',
+            'ods': 'application/vnd.oasis.opendocument.spreadsheet'
+        },
+        'application/vnd.google-apps.presentation': {
+            'pdf': 'application/pdf',
+            'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'txt': 'text/plain',
+            'odp': 'application/vnd.oasis.opendocument.presentation'
+        }
+    }
+
+    if mime_type not in export_mappings:
+        return f"❌ Cannot export {mime_type}. Only Google Docs, Sheets, and Slides can be exported."
+
+    if export_format not in export_mappings[mime_type]:
+        available = ', '.join(export_mappings[mime_type].keys())
+        return f"❌ Format '{export_format}' not available for this file type. Available: {available}"
+
+    export_mime = export_mappings[mime_type][export_format]
+
+    # Export the file
+    request = service.files().export_media(fileId=file_id, mimeType=export_mime)
+
+    dest_path = Path(destination_path)
+    fh = io.FileIO(dest_path, 'wb')
+    downloader = MediaIoBaseDownload(fh, request)
+
+    done = False
+    while not done:
+        status, done = downloader.next_chunk()
+
+    return f"✅ Exported file to {export_format}!\nName: {file_name}\nSaved to: {dest_path}"
+
+
+@mcp.tool()
+def drive_create_shortcut(name: str, target_file_id: str, parent_id: Optional[str] = None, drive_id: Optional[str] = None) -> str:
+    """Create a shortcut to a file or folder."""
+    service = get_service('drive', 'v3')
+
+    file_metadata = {
+        'name': name,
+        'mimeType': 'application/vnd.google-apps.shortcut',
+        'shortcutDetails': {
+            'targetId': target_file_id
+        }
+    }
+
+    if parent_id:
+        file_metadata['parents'] = [parent_id]
+
+    params = {'supportsAllDrives': True} if drive_id else {}
+
+    shortcut = service.files().create(
+        body=file_metadata,
+        fields='id, name, shortcutDetails',
+        **params
+    ).execute()
+
+    return f"✅ Shortcut created!\nName: {shortcut['name']}\nShortcut ID: {shortcut['id']}\nTarget ID: {shortcut['shortcutDetails']['targetId']}"
+
+
+@mcp.tool()
+def drive_list_revisions(file_id: str) -> str:
+    """List all revisions (version history) of a file."""
+    service = get_service('drive', 'v3')
+
+    try:
+        revisions = service.revisions().list(
+            fileId=file_id,
+            fields='revisions(id, modifiedTime, lastModifyingUser, size)'
+        ).execute()
+
+        revs = revisions.get('revisions', [])
+
+        if not revs:
+            return f"No revisions found for file {file_id}"
+
+        output = f"Found {len(revs)} revision(s) for file {file_id}:\n\n"
+        for idx, rev in enumerate(revs, 1):
+            output += f"Version {idx}:\n"
+            output += f"  Revision ID: {rev['id']}\n"
+            output += f"  Modified: {rev.get('modifiedTime', 'N/A')}\n"
+
+            if 'lastModifyingUser' in rev:
+                user = rev['lastModifyingUser']
+                output += f"  Modified by: {user.get('displayName', user.get('emailAddress', 'Unknown'))}\n"
+
+            if 'size' in rev:
+                output += f"  Size: {rev['size']} bytes\n"
+
+            output += "\n"
+
+        return output
+
+    except Exception as e:
+        return f"❌ Error listing revisions: {str(e)}\nNote: Revisions are only available for Google Docs, Sheets, and Slides."
+
+
 # ============================================================================
 # CALENDAR TOOLS
 # ============================================================================

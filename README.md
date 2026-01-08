@@ -26,7 +26,7 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Delete** emails (move to trash)
 - Full thread support
 
-### 📁 Google Drive (12 tools) - **Full Shared Drives Support!**
+### 📁 Google Drive (24 tools) - **Full Shared Drives Support!**
 - **List all shared drives** you have access to
 - **List files** in any folder (My Drive or Shared Drives)
 - **Create folders** in My Drive or Shared Drives
@@ -35,9 +35,21 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Delete** files and folders
 - **Copy** files
 - **Move** files between folders
+- **Rename** files and folders
 - **Share** files with specific users (reader, writer, commenter roles)
+- **List permissions** - See who has access to files
+- **Remove permissions** - Unshare/revoke access
+- **Make files public** - Share with anyone who has the link
+- **Update file description** and metadata
+- **Star/unstar files** - Mark favorites
 - **Get file metadata** with detailed information
 - **Search files** with advanced query syntax
+- **List trashed files** - Browse trash
+- **Restore files** from trash
+- **Empty trash** - Permanently delete all trashed files
+- **Export files** to multiple formats (PDF, DOCX, XLSX, CSV, HTML, etc.)
+- **Create shortcuts** to files/folders
+- **List file revisions** - View version history
 - Works seamlessly with both My Drive and Team Drives
 
 ### 📝 Google Docs (16 tools)
@@ -240,7 +252,7 @@ Search my Gmail for emails from john@example.com sent this week
 Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz789
 ```
 
-## Available Tools (69 Tools Total)
+## Available Tools (81 Tools Total)
 
 ### Gmail Tools (8 tools)
 - `gmail_search(query, max_results)` - Search emails with Gmail query syntax
@@ -252,7 +264,7 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `gmail_archive(message_id)` - Archive email (remove from inbox)
 - `gmail_delete(message_id)` - Move email to trash
 
-### Drive Tools (12 tools)
+### Drive Tools (24 tools)
 - `drive_list_shared_drives(page_size)` - List all shared drives you have access to
 - `drive_list_files(folder_id, drive_id, query, page_size)` - List files in folders
 - `drive_create_folder(name, parent_id, drive_id)` - Create folders anywhere
@@ -261,9 +273,21 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `drive_delete_file(file_id, drive_id)` - Delete files/folders
 - `drive_copy_file(file_id, new_name, parent_id, drive_id)` - Copy files
 - `drive_move_file(file_id, new_parent_id, drive_id)` - Move files between folders
+- `drive_rename_file(file_id, new_name, drive_id)` - Rename files/folders
 - `drive_share_file(file_id, email, role, drive_id)` - Share with users
+- `drive_list_permissions(file_id, drive_id)` - List who has access to a file
+- `drive_remove_permission(file_id, permission_id, drive_id)` - Remove/revoke access
+- `drive_make_public(file_id, role, drive_id)` - Make file accessible to anyone with link
+- `drive_update_description(file_id, description, drive_id)` - Update file description
+- `drive_star_file(file_id, starred, drive_id)` - Star/unstar files (favorites)
 - `drive_get_file_metadata(file_id, drive_id)` - Get detailed file information
 - `drive_search_files(query, drive_id, page_size)` - Advanced file search
+- `drive_list_trashed_files(page_size)` - List files in trash
+- `drive_restore_file(file_id, drive_id)` - Restore file from trash
+- `drive_empty_trash()` - Permanently delete all trashed files
+- `drive_export_file(file_id, destination_path, export_format)` - Export to PDF, DOCX, XLSX, CSV, etc.
+- `drive_create_shortcut(name, target_file_id, parent_id, drive_id)` - Create shortcut to file
+- `drive_list_revisions(file_id)` - List file revision history
 
 ### Docs Tools (16 tools)
 - `docs_create(title, parent_id, drive_id)` - Create documents
