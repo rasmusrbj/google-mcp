@@ -53,6 +53,9 @@ SCOPES = [
     'https://www.googleapis.com/auth/forms.body',
     'https://www.googleapis.com/auth/tasks',
     'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/chat.spaces',
+    'https://www.googleapis.com/auth/chat.messages',
+    'https://www.googleapis.com/auth/chat.memberships',
 ]
 
 
@@ -2614,6 +2617,309 @@ def forms_list_responses(form_id: str) -> str:
 
     except Exception as e:
         return f"❌ Error listing responses: {str(e)}"
+
+
+# ============================================================================
+# GOOGLE CHAT TOOLS
+# ============================================================================
+
+@mcp.tool()
+def chat_list_spaces(page_size: int = 100) -> str:
+    """List all Google Chat spaces (rooms and DMs) the user has access to."""
+    service = get_service('chat', 'v1')
+
+    results = service.spaces().list(pageSize=page_size).execute()
+    spaces = results.get('spaces', [])
+
+    if not spaces:
+        return "No Chat spaces found."
+
+    output = f"Found {len(spaces)} space(s):\n\n"
+    for space in spaces:
+        space_type = space.get('type', 'UNKNOWN')
+        display_name = space.get('displayName', 'Unnamed')
+
+        icon = "💬" if space_type == 'DM' else "👥"
+        output += f"{icon} {display_name}\n"
+        output += f"   Type: {space_type}\n"
+        output += f"   Space ID: {space['name']}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def chat_get_space(space_id: str) -> str:
+    """Get details about a specific Google Chat space."""
+    service = get_service('chat', 'v1')
+
+    space = service.spaces().get(name=space_id).execute()
+
+    output = f"Space: {space.get('displayName', 'Unnamed')}\n"
+    output += f"ID: {space['name']}\n"
+    output += f"Type: {space.get('type', 'UNKNOWN')}\n"
+    output += f"Space threaded: {space.get('spaceThreadingState', 'UNKNOWN')}\n"
+
+    if 'spaceDetails' in space:
+        details = space['spaceDetails']
+        if 'description' in details:
+            output += f"Description: {details['description']}\n"
+        if 'guidelines' in details:
+            output += f"Guidelines: {details['guidelines']}\n"
+
+    return output
+
+
+@mcp.tool()
+def chat_create_space(display_name: str, space_type: str = "SPACE") -> str:
+    """Create a new Google Chat space. Types: SPACE (room) or DM (direct message)."""
+    service = get_service('chat', 'v1')
+
+    space_body = {
+        'displayName': display_name,
+        'spaceType': space_type
+    }
+
+    created_space = service.spaces().create(body=space_body).execute()
+
+    return f"✅ Chat space created!\nName: {created_space.get('displayName', 'Unnamed')}\nSpace ID: {created_space['name']}"
+
+
+@mcp.tool()
+def chat_update_space(space_id: str, display_name: Optional[str] = None, description: Optional[str] = None) -> str:
+    """Update a Google Chat space's name or description."""
+    service = get_service('chat', 'v1')
+
+    update_mask = []
+    space_body = {}
+
+    if display_name:
+        space_body['displayName'] = display_name
+        update_mask.append('displayName')
+
+    if description:
+        space_body['spaceDetails'] = {'description': description}
+        update_mask.append('spaceDetails.description')
+
+    if not update_mask:
+        return "No fields to update."
+
+    updated_space = service.spaces().patch(
+        name=space_id,
+        updateMask=','.join(update_mask),
+        body=space_body
+    ).execute()
+
+    return f"✅ Space updated!\nName: {updated_space.get('displayName', 'Unnamed')}\nSpace ID: {updated_space['name']}"
+
+
+@mcp.tool()
+def chat_delete_space(space_id: str) -> str:
+    """Delete a Google Chat space."""
+    service = get_service('chat', 'v1')
+
+    service.spaces().delete(name=space_id).execute()
+
+    return f"✅ Space {space_id} deleted"
+
+
+@mcp.tool()
+def chat_send_message(space_id: str, text: str, thread_key: Optional[str] = None) -> str:
+    """Send a message to a Google Chat space. Optional thread_key to reply in thread."""
+    service = get_service('chat', 'v1')
+
+    message_body = {'text': text}
+
+    if thread_key:
+        message_body['thread'] = {'threadKey': thread_key}
+
+    message = service.spaces().messages().create(
+        parent=space_id,
+        body=message_body
+    ).execute()
+
+    return f"✅ Message sent!\nMessage ID: {message['name']}\nSpace: {space_id}"
+
+
+@mcp.tool()
+def chat_list_messages(space_id: str, page_size: int = 25) -> str:
+    """List messages in a Google Chat space."""
+    service = get_service('chat', 'v1')
+
+    results = service.spaces().messages().list(
+        parent=space_id,
+        pageSize=page_size,
+        orderBy='createTime desc'
+    ).execute()
+
+    messages = results.get('messages', [])
+
+    if not messages:
+        return f"No messages found in space {space_id}"
+
+    output = f"Found {len(messages)} message(s):\n\n"
+    for msg in messages:
+        sender_name = msg.get('sender', {}).get('displayName', 'Unknown')
+        text = msg.get('text', '(no text)')
+        create_time = msg.get('createTime', 'Unknown')
+
+        output += f"💬 {sender_name}: {text[:100]}\n"
+        output += f"   Time: {create_time}\n"
+        output += f"   Message ID: {msg['name']}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def chat_get_message(message_id: str) -> str:
+    """Get details about a specific Google Chat message."""
+    service = get_service('chat', 'v1')
+
+    message = service.spaces().messages().get(name=message_id).execute()
+
+    output = f"Message ID: {message['name']}\n"
+    output += f"Sender: {message.get('sender', {}).get('displayName', 'Unknown')}\n"
+    output += f"Time: {message.get('createTime', 'Unknown')}\n"
+    output += f"Text: {message.get('text', '(no text)')}\n"
+
+    if 'thread' in message:
+        output += f"Thread: {message['thread'].get('name', 'N/A')}\n"
+
+    return output
+
+
+@mcp.tool()
+def chat_update_message(message_id: str, text: str) -> str:
+    """Update (edit) a Google Chat message."""
+    service = get_service('chat', 'v1')
+
+    updated_message = service.spaces().messages().patch(
+        name=message_id,
+        updateMask='text',
+        body={'text': text}
+    ).execute()
+
+    return f"✅ Message updated!\nMessage ID: {updated_message['name']}"
+
+
+@mcp.tool()
+def chat_delete_message(message_id: str) -> str:
+    """Delete a Google Chat message."""
+    service = get_service('chat', 'v1')
+
+    service.spaces().messages().delete(name=message_id).execute()
+
+    return f"✅ Message {message_id} deleted"
+
+
+@mcp.tool()
+def chat_list_members(space_id: str, page_size: int = 100) -> str:
+    """List all members in a Google Chat space."""
+    service = get_service('chat', 'v1')
+
+    results = service.spaces().members().list(
+        parent=space_id,
+        pageSize=page_size
+    ).execute()
+
+    members = results.get('memberships', [])
+
+    if not members:
+        return f"No members found in space {space_id}"
+
+    output = f"Found {len(members)} member(s):\n\n"
+    for member in members:
+        member_data = member.get('member', {})
+        name = member_data.get('displayName', 'Unknown')
+        email = member_data.get('name', 'N/A')
+        role = member.get('role', 'MEMBER')
+
+        output += f"👤 {name}\n"
+        output += f"   Email/ID: {email}\n"
+        output += f"   Role: {role}\n"
+        output += f"   Membership ID: {member['name']}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def chat_add_member(space_id: str, user_email: str) -> str:
+    """Add a member to a Google Chat space."""
+    service = get_service('chat', 'v1')
+
+    membership_body = {
+        'member': {
+            'name': f'users/{user_email}',
+            'type': 'HUMAN'
+        }
+    }
+
+    membership = service.spaces().members().create(
+        parent=space_id,
+        body=membership_body
+    ).execute()
+
+    return f"✅ Added {user_email} to space!\nMembership ID: {membership['name']}"
+
+
+@mcp.tool()
+def chat_remove_member(membership_id: str) -> str:
+    """Remove a member from a Google Chat space. Use chat_list_members to get membership IDs."""
+    service = get_service('chat', 'v1')
+
+    service.spaces().members().delete(name=membership_id).execute()
+
+    return f"✅ Removed member {membership_id} from space"
+
+
+@mcp.tool()
+def chat_create_reaction(message_id: str, emoji: str) -> str:
+    """Add a reaction (emoji) to a message. Emoji examples: '👍', '❤️', '😊'"""
+    service = get_service('chat', 'v1')
+
+    reaction_body = {
+        'emoji': {
+            'unicode': emoji
+        }
+    }
+
+    reaction = service.spaces().messages().reactions().create(
+        parent=message_id,
+        body=reaction_body
+    ).execute()
+
+    return f"✅ Reaction added!\nEmoji: {emoji}\nReaction ID: {reaction['name']}"
+
+
+@mcp.tool()
+def chat_list_reactions(message_id: str) -> str:
+    """List all reactions on a message."""
+    service = get_service('chat', 'v1')
+
+    results = service.spaces().messages().reactions().list(parent=message_id).execute()
+    reactions = results.get('reactions', [])
+
+    if not reactions:
+        return f"No reactions on message {message_id}"
+
+    output = f"Found {len(reactions)} reaction(s):\n\n"
+    for reaction in reactions:
+        emoji = reaction.get('emoji', {}).get('unicode', '?')
+        user = reaction.get('user', {}).get('displayName', 'Unknown')
+
+        output += f"{emoji} by {user}\n"
+        output += f"   Reaction ID: {reaction['name']}\n\n"
+
+    return output
+
+
+@mcp.tool()
+def chat_delete_reaction(reaction_id: str) -> str:
+    """Delete a reaction from a message. Use chat_list_reactions to get reaction IDs."""
+    service = get_service('chat', 'v1')
+
+    service.spaces().messages().reactions().delete(name=reaction_id).execute()
+
+    return f"✅ Reaction {reaction_id} deleted"
 
 
 # ============================================================================

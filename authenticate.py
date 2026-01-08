@@ -30,6 +30,9 @@ SCOPES = [
     'https://www.googleapis.com/auth/forms.body',
     'https://www.googleapis.com/auth/tasks',
     'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/chat.spaces',
+    'https://www.googleapis.com/auth/chat.messages',
+    'https://www.googleapis.com/auth/chat.memberships',
     'https://www.googleapis.com/auth/userinfo.email',  # Needed to get user's email for token filename
 ]
 

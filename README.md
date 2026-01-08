@@ -10,7 +10,8 @@ A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 Most Google Drive MCP servers have limited or no shared drive (Team Drive) support. This server provides:
 
 ✅ **Full Shared Drive Support** - Create, read, and manage files in shared drives
-✅ **Complete Google Workspace** - Gmail, Drive, Docs, Sheets, Slides, Tasks
+✅ **Complete Google Workspace** - Gmail, Drive, Docs, Sheets, Slides, Forms, Chat, Calendar, Tasks
+✅ **128 Production-Ready Tools** - Comprehensive coverage of all services
 ✅ **Simple Setup** - Automated installation and authentication
 ✅ **Production Ready** - Proper error handling and token refresh
 
@@ -133,6 +134,24 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 - **Get specific response** with detailed answers
 - **List all responses** with answer data
 
+### 💬 Google Chat (14 tools)
+- **List spaces** - View all Chat rooms and DMs
+- **Get space** details
+- **Create spaces** - New Chat rooms
+- **Update spaces** - Change name or description
+- **Delete spaces**
+- **Send messages** to spaces with threading support
+- **List messages** in a space
+- **Get message** details
+- **Update messages** - Edit sent messages
+- **Delete messages**
+- **List members** in a space
+- **Add members** to spaces
+- **Remove members** from spaces
+- **Create reactions** - Add emoji reactions to messages
+- **List reactions** on messages
+- **Delete reactions**
+
 ### 📅 Google Calendar (4 tools)
 - **List** upcoming events
 - **Create** events with attendees and location
@@ -203,6 +222,7 @@ Enable these APIs in your project:
 - [Google Sheets API](https://console.cloud.google.com/apis/library/sheets.googleapis.com)
 - [Google Slides API](https://console.cloud.google.com/apis/library/slides.googleapis.com)
 - [Google Forms API](https://console.cloud.google.com/apis/library/forms.googleapis.com)
+- [Google Chat API](https://console.cloud.google.com/apis/library/chat.googleapis.com)
 - [Google Tasks API](https://console.cloud.google.com/apis/library/tasks.googleapis.com)
 
 ### 3. Configure OAuth Consent Screen
@@ -281,7 +301,7 @@ Search my Gmail for emails from john@example.com sent this week
 Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz789
 ```
 
-## Available Tools (114 Tools Total)
+## Available Tools (128 Tools Total)
 
 ### Gmail Tools (33 tools)
 - `gmail_search(query, max_results)` - Search emails with Gmail query syntax
@@ -398,6 +418,24 @@ Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz7
 - `forms_delete_question(form_id, question_index)` - Delete question by index
 - `forms_get_response(form_id, response_id)` - Get specific response with detailed answers
 - `forms_list_responses(form_id)` - Get all form responses
+
+### Chat Tools (14 tools)
+- `chat_list_spaces(page_size)` - List all Chat spaces (rooms and DMs)
+- `chat_get_space(space_id)` - Get space details
+- `chat_create_space(display_name, space_type)` - Create new Chat room
+- `chat_update_space(space_id, display_name, description)` - Update space name/description
+- `chat_delete_space(space_id)` - Delete space
+- `chat_send_message(space_id, text, thread_key)` - Send message to space with threading
+- `chat_list_messages(space_id, page_size)` - List messages in space
+- `chat_get_message(message_id)` - Get message details
+- `chat_update_message(message_id, text)` - Edit a message
+- `chat_delete_message(message_id)` - Delete message
+- `chat_list_members(space_id, page_size)` - List members in space
+- `chat_add_member(space_id, user_email)` - Add member to space
+- `chat_remove_member(membership_id)` - Remove member from space
+- `chat_create_reaction(message_id, emoji)` - Add emoji reaction to message
+- `chat_list_reactions(message_id)` - List reactions on message
+- `chat_delete_reaction(reaction_id)` - Delete reaction
 
 ### Calendar Tools (4 tools)
 - `calendar_list_events(max_results, time_min)` - List upcoming events
