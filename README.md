@@ -16,40 +16,62 @@ Most Google Drive MCP servers have limited or no shared drive (Team Drive) suppo
 
 ## Features
 
-### 📧 Gmail
-- Search emails with advanced queries
-- Read full message content
-- Send emails with CC support
-- Manage labels and threads
+### 📧 Gmail (9 tools)
+- **Search** emails with advanced Gmail queries
+- **Read** full message content with headers and body
+- **Send** emails with CC support
+- **Reply** to email threads
+- **Mark as read/unread**
+- **Archive** emails
+- **Delete** emails (move to trash)
+- **Labels** management
+- Full thread support
 
-### 📁 Google Drive (with Shared Drives!)
+### 📁 Google Drive (7 tools) - **Full Shared Drives Support!**
 - **List all shared drives** you have access to
-- **Create folders and files** in shared drives
-- Browse shared drive contents
-- Upload files to shared drives
-- Full file metadata access
+- **List files** in any folder (My Drive or Shared Drives)
+- **Create folders** in My Drive or Shared Drives
+- **Upload files** to any location including Shared Drives
+- **Delete** files and folders
+- **Copy** files
+- **Share** files with specific users (reader, writer, commenter roles)
+- Works seamlessly with both My Drive and Team Drives
 
-### 📝 Google Docs
-- Create documents in My Drive or Shared Drives
-- Read document content
-- Append text to documents
-- Full formatting support
+### 📝 Google Docs (3 tools)
+- **Create** documents in My Drive or Shared Drives
+- **Read** full document content
+- **Append** text to existing documents
+- Full shared drive support
 
-### 📊 Google Sheets
-- Create spreadsheets anywhere
-- Read and write cell data
-- Formula support
-- Multi-sheet operations
+### 📊 Google Sheets (4 tools)
+- **Create** spreadsheets in any location
+- **Read** data from any range
+- **Write** data to specific cells/ranges
+- **Append** rows to existing sheets
+- Formula support via USER_ENTERED mode
 
-### 🎨 Google Slides
-- Create presentations in any drive
-- Add and modify slides
-- Template support
+### 🎨 Google Slides (1 tool)
+- **Create** presentations in My Drive or Shared Drives
+- Full shared drive support
 
-### ✅ Google Tasks
-- List and create tasks
-- Manage task lists
-- Due dates and notes
+### 📋 Google Forms (5 tools)
+- **Create** new forms
+- **Get** form details and questions
+- **Add text questions** (short or paragraph)
+- **Add multiple choice** questions
+- **List responses** with full answer data
+
+### 📅 Google Calendar (3 tools)
+- **List** upcoming events
+- **Create** events with attendees and location
+- **Delete** events
+- Full timezone support
+
+### ✅ Google Tasks (4 tools)
+- **List** tasks from any task list
+- **Create** new tasks with notes
+- **Complete** tasks (mark as done)
+- **Delete** tasks
 
 ## Installation
 
@@ -186,35 +208,58 @@ Search my Gmail for emails from john@example.com sent this week
 Create a Google Doc titled "Meeting Notes" in folder abc123 in shared drive xyz789
 ```
 
-## Available Tools
+## Available Tools (35+ Tools Total)
 
-### Drive Tools
-- `drive_list_shared_drives(page_size)` - List all shared drives
-- `drive_list_files(folder_id, drive_id, query, page_size)` - List files
-- `drive_create_folder(name, parent_id, drive_id)` - Create folders
-- `get_file_info(file_id, drive_id)` - Get file details
+### Gmail Tools (7 tools)
+- `gmail_search(query, max_results)` - Search emails with Gmail query syntax
+- `gmail_read(message_id)` - Read full email content
+- `gmail_send(to, subject, body, cc)` - Send new emails
+- `gmail_reply(message_id, body)` - Reply to email threads
+- `gmail_mark_read(message_id)` - Mark email as read
+- `gmail_mark_unread(message_id)` - Mark email as unread
+- `gmail_archive(message_id)` - Archive email (remove from inbox)
+- `gmail_delete(message_id)` - Move email to trash
 
-### Gmail Tools
-- `gmail_search(query, max_results)` - Search emails
-- `gmail_read(message_id)` - Read email content
-- `gmail_send(to, subject, body, cc)` - Send emails
+### Drive Tools (7 tools)
+- `drive_list_shared_drives(page_size)` - List all shared drives you have access to
+- `drive_list_files(folder_id, drive_id, query, page_size)` - List files in folders
+- `drive_create_folder(name, parent_id, drive_id)` - Create folders anywhere
+- `drive_upload_file(file_path, name, parent_id, drive_id)` - Upload files
+- `drive_delete_file(file_id, drive_id)` - Delete files/folders
+- `drive_copy_file(file_id, new_name, parent_id, drive_id)` - Copy files
+- `drive_share_file(file_id, email, role, drive_id)` - Share with users
 
-### Docs Tools
+### Docs Tools (3 tools)
 - `docs_create(title, parent_id, drive_id)` - Create documents
 - `docs_read(document_id)` - Read document content
-- `docs_append_text(document_id, text)` - Add text
+- `docs_append_text(document_id, text)` - Append text
 
-### Sheets Tools
+### Sheets Tools (4 tools)
 - `sheets_create(title, parent_id, drive_id)` - Create spreadsheets
-- `sheets_read(spreadsheet_id, range_name)` - Read data
-- `sheets_write(spreadsheet_id, range_name, values)` - Write data
+- `sheets_read(spreadsheet_id, range_name)` - Read cell data
+- `sheets_write(spreadsheet_id, range_name, values)` - Write/update cells
+- `sheets_append(spreadsheet_id, range_name, values)` - Append rows
 
-### Slides Tools
+### Slides Tools (1 tool)
 - `slides_create(title, parent_id, drive_id)` - Create presentations
 
-### Tasks Tools
+### Forms Tools (5 tools)
+- `forms_create(title, description)` - Create new forms
+- `forms_get(form_id)` - Get form structure and questions
+- `forms_add_text_question(form_id, question_text, required)` - Add text questions
+- `forms_add_multiple_choice(form_id, question_text, options, required)` - Add choice questions
+- `forms_list_responses(form_id)` - Get all form responses
+
+### Calendar Tools (3 tools)
+- `calendar_list_events(max_results, time_min)` - List upcoming events
+- `calendar_create_event(summary, start_time, end_time, description, location, attendees)` - Create events
+- `calendar_delete_event(event_id)` - Delete events
+
+### Tasks Tools (4 tools)
 - `tasks_list(task_list_id, max_results)` - List tasks
-- `tasks_create(title, notes, task_list_id)` - Create tasks
+- `tasks_create(title, notes, task_list_id)` - Create new tasks
+- `tasks_complete(task_id, task_list_id)` - Mark tasks as done
+- `tasks_delete(task_id, task_list_id)` - Delete tasks
 
 ## Troubleshooting
 

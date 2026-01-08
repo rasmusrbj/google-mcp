@@ -15,18 +15,22 @@ import threading
 # Paths
 CLIENT_SECRET_PATH = Path.home() / "google-workspace-mcp" / "client_secret.json"
 TOKEN_DIR = Path.home() / ".google_workspace_mcp" / "credentials"
-TOKEN_PATH = TOKEN_DIR / "rasmus@happenings.dk.json"
+
+# Token path will be determined dynamically based on user's email
 
 # Scopes needed for all services
 SCOPES = [
     'https://www.googleapis.com/auth/gmail.modify',
     'https://www.googleapis.com/auth/gmail.send',
+    'https://www.googleapis.com/auth/gmail.labels',
     'https://www.googleapis.com/auth/drive',
     'https://www.googleapis.com/auth/documents',
     'https://www.googleapis.com/auth/spreadsheets',
     'https://www.googleapis.com/auth/presentations',
     'https://www.googleapis.com/auth/forms.body',
     'https://www.googleapis.com/auth/tasks',
+    'https://www.googleapis.com/auth/calendar',
+    'https://www.googleapis.com/auth/userinfo.email',  # Needed to get user's email for token filename
 ]
 
 
@@ -98,14 +102,6 @@ def authenticate():
 
     print(f"\n✅ Found client secret at {CLIENT_SECRET_PATH}")
 
-    # Check if credentials already exist
-    if TOKEN_PATH.exists():
-        print(f"\n⚠️  Credentials already exist at {TOKEN_PATH}")
-        response = input("Do you want to re-authenticate? (y/N): ")
-        if response.lower() != 'y':
-            print("Keeping existing credentials.")
-            return True
-
     print("\n🌐 Starting OAuth flow...")
     print("A browser window will open for you to sign in with your Google account.")
     print()
@@ -140,13 +136,30 @@ def authenticate():
     flow.fetch_token(code=server.auth_code)
     creds = flow.credentials
 
-    # Save credentials
+    # Get user email from credentials (requires userinfo.email scope)
+    from googleapiclient.discovery import build
+    userinfo_service = build('oauth2', 'v2', credentials=creds)
+    user_info = userinfo_service.userinfo().get().execute()
+    user_email = user_info.get('email', 'default')
+
+    print(f"\n✅ Authenticated as: {user_email}")
+
+    # Save credentials with user's email as filename
     TOKEN_DIR.mkdir(parents=True, exist_ok=True)
-    with open(TOKEN_PATH, 'w') as token:
+    token_path = TOKEN_DIR / f"{user_email}.json"
+
+    # Check if credentials already exist for this user
+    if token_path.exists():
+        response = input(f"\n⚠️  Credentials already exist for {user_email}. Overwrite? (y/N): ")
+        if response.lower() != 'y':
+            print("Keeping existing credentials.")
+            return True
+
+    with open(token_path, 'w') as token:
         token.write(creds.to_json())
 
     print(f"\n✅ Authentication successful!")
-    print(f"📁 Credentials saved to: {TOKEN_PATH}")
+    print(f"📁 Credentials saved to: {token_path}")
     print()
     print("You can now use the Google Workspace MCP server!")
 
