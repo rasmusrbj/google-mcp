@@ -136,6 +136,9 @@ def authenticate():
         return False
 
     # Exchange code for credentials
+    # Disable strict scope validation (Google adds 'openid' automatically)
+    import os
+    os.environ['OAUTHLIB_RELAX_TOKEN_SCOPE'] = '1'
     flow.fetch_token(code=server.auth_code)
     creds = flow.credentials
 
